@@ -1,0 +1,9 @@
+{
+  "name": "folder",
+  "title": "Folder",
+  "description": "A named container for other documents. Also a document itself.",
+  "fields": [
+    { "name": "purpose",  "kind": "text",   "label": "Purpose",  "rows": 3 },
+    { "name": "owner",    "kind": "string", "label": "Owner" }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "name": "wiki-page",
+  "title": "Wiki page",
+  "description": "Long-form text page with a title, body, and optional summary.",
+  "fields": [
+    { "name": "summary",       "kind": "text",    "label": "Summary",       "rows": 3, "help": "One-paragraph overview shown in listings." },
+    { "name": "author_alias",  "kind": "string",  "label": "Author alias",  "help": "Byline shown at the top of the page." },
+    { "name": "status",        "kind": "enum",    "label": "Status",        "choices": ["draft", "review", "published", "archived"], "required": true },
+    { "name": "tags",          "kind": "array<string>", "label": "Tags",    "help": "Comma-separated." }
+  ]
+}

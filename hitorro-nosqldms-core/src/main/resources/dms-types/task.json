@@ -1,0 +1,13 @@
+{
+  "name": "task",
+  "title": "Task",
+  "description": "A single unit of work with an owner, status, and priority.",
+  "fields": [
+    { "name": "assignee",   "kind": "string",  "label": "Assignee",  "required": true },
+    { "name": "status",     "kind": "enum",    "label": "Status",    "choices": ["todo", "in-progress", "blocked", "done"], "required": true },
+    { "name": "priority",   "kind": "enum",    "label": "Priority",  "choices": ["low", "medium", "high", "urgent"] },
+    { "name": "due_date",   "kind": "date",    "label": "Due date" },
+    { "name": "estimate_h", "kind": "double",  "label": "Estimate (hours)" },
+    { "name": "labels",     "kind": "array<string>", "label": "Labels" }
+  ]
+}

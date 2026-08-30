@@ -1,0 +1,14 @@
+{
+  "name": "contact",
+  "title": "Contact",
+  "description": "A person or organization with contact details.",
+  "fields": [
+    { "name": "first_name",   "kind": "string",  "label": "First name", "required": true },
+    { "name": "last_name",    "kind": "string",  "label": "Last name" },
+    { "name": "organization", "kind": "string",  "label": "Organization" },
+    { "name": "email",        "kind": "string",  "label": "Email" },
+    { "name": "phone",        "kind": "string",  "label": "Phone" },
+    { "name": "website",      "kind": "url",     "label": "Website" },
+    { "name": "notes",        "kind": "text",    "label": "Notes", "rows": 4 }
+  ]
+}

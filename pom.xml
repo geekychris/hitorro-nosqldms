@@ -5,13 +5,14 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.hitorro</groupId>
-    <artifactId>hitorro-dms-parent</artifactId>
+    <artifactId>hitorro-nosqldms-parent</artifactId>
     <version>0.1.0</version>
     <packaging>pom</packaging>
 
-    <name>Hitorro DMS (parent)</name>
+    <name>Hitorro NoSQL DMS (parent)</name>
     <description>
-        Distributed document management system on JVS + KV + Lucene.
+        Distributed, NoSQL-backed document management system on JVS
+        types + KV storage + Lucene. No RDBMS anywhere.
         See docs in hitorro-jsontypesystem/docs/distributed-dms.md.
     </description>
 
@@ -27,8 +28,8 @@
     </properties>
 
     <modules>
-        <module>hitorro-nosql-dms-core</module>
-        <module>hitorro-dms-spring-boot</module>
+        <module>hitorro-nosqldms-core</module>
+        <module>hitorro-nosqldms-spring-boot</module>
     </modules>
 
     <dependencyManagement>

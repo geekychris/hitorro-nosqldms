@@ -1,4 +1,4 @@
-# hitorro-dms
+# hitorro-nosqldms
 
 A distributed, RDBMS-free document management system built on JVS types,
 KV storage, and Lucene indexing. The reference implementation for the
@@ -43,8 +43,8 @@ interfaces to persist.
 ```
 hitorro-dms/
 ├── hitorro-nosql-dms-core/    — Spring-neutral NoSQL core (types, stores, service, index)
-├── hitorro-dms-spring-boot/   — Spring Boot 3 runtime: autoconfig + REST + hosts UI
-└── hitorro-dms-web/           — React 18 + Vite + TypeScript UI
+├── hitorro-nosqldms-spring-boot/   — Spring Boot 3 runtime: autoconfig + REST + hosts UI
+└── hitorro-nosqldms-web/           — React 18 + Vite + TypeScript UI
 ```
 
 - **`hitorro-nosql-dms-core`** — no Spring, no RDBMS. `DocumentService`,
@@ -54,11 +54,11 @@ hitorro-dms/
   keyspace via `BlobStore` (content-addressed by sha256); metadata
   lives in sibling KV keyspaces via `DocumentStore` / `ReferenceStore` /
   `FolderStore` / `AclStore` / `TagStore`.
-- **`hitorro-dms-spring-boot`** — pulls core in as a normal dep,
+- **`hitorro-nosqldms-spring-boot`** — pulls core in as a normal dep,
   exposes each service as a Spring bean via `DmsAutoConfiguration`,
   contributes REST controllers. Serves the pre-built React UI from
   `src/main/resources/static/`.
-- **`hitorro-dms-web`** — Vite/TypeScript. `vite build` emits directly
+- **`hitorro-nosqldms-web`** — Vite/TypeScript. `vite build` emits directly
   into the Spring Boot module's `static/` dir so the backend jar
   ships the UI.
 
@@ -66,13 +66,13 @@ hitorro-dms/
 
 ```bash
 # 1. Build the UI (once, or after any web change)
-(cd hitorro-dms-web && pnpm install && pnpm build)
+(cd hitorro-nosqldms-web && pnpm install && pnpm build)
 
 # 2. Build + test everything
 mvn install
 
 # 3. Run standalone
-java -jar hitorro-dms-spring-boot/target/hitorro-dms-spring-boot-0.1.0-app.jar
+java -jar hitorro-nosqldms-spring-boot/target/hitorro-nosqldms-spring-boot-0.1.0-app.jar
 
 # 4. Open the UI
 open http://localhost:8090
@@ -156,11 +156,11 @@ To swap storage impls, provide your own beans of `DocumentStore`,
 mvn test
 ```
 
-- **`hitorro-dms-core`** — 57 unit tests covering `VersionLabel`
+- **`hitorro-nosqldms-core`** — 57 unit tests covering `VersionLabel`
   parsing/ordering/bumping (20), the copy-on-write semantics of
   `DocumentService` (16), sibling store contracts (9), blob store (6),
   Lucene indexing (4), `DmsContext` wiring (2).
-- **`hitorro-dms-spring-boot`** — 5 integration tests booting the
+- **`hitorro-nosqldms-spring-boot`** — 5 integration tests booting the
   full Spring context on a random port and hitting the REST surface
   end-to-end (create, check-in, PUT rendition, folder link, ACL
   grant, search).
