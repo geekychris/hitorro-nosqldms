@@ -53,6 +53,37 @@ class LuceneIndexTest {
     }
 
     @Test
+    void bare_query_matches_title_and_typefields_via_all(@TempDir Path tmp) throws Exception {
+        LuceneIndex idx = new LuceneIndex(tmp.resolve("idx"));
+        DocumentService svc = new DocumentService(new InMemoryDocumentStore(), new InMemoryBlobStore(), idx);
+
+        // Doc with the term "chris" ONLY in the title (not the body)
+        CreateRequest a = new CreateRequest();
+        a.title = "chris"; a.body = "some content here";
+        a.createdBy = "u"; a.contentType = "wiki-page";
+        Document da = svc.create(a);
+
+        // Doc with "chris" ONLY in a typed field
+        CreateRequest b = new CreateRequest();
+        b.title = "unrelated"; b.body = "different content";
+        b.createdBy = "u"; b.contentType = "contact";
+        b.typeName = "contact";
+        b.typeFields = java.util.Map.of("first_name", "chris", "last_name", "Collins");
+        Document db = svc.create(b);
+
+        // Bare "chris" must find BOTH via the _all default field.
+        var hits = idx.search("chris", 10);
+        assertThat(hits).extracting(IndexSearcher.SearchHit::canonicalId)
+                .containsExactlyInAnyOrder(da.canonicalId, db.canonicalId);
+
+        // Explicit field queries still work.
+        var titleHits = idx.search("title:chris", 10);
+        assertThat(titleHits).extracting(IndexSearcher.SearchHit::canonicalId).containsExactly(da.canonicalId);
+
+        idx.close();
+    }
+
+    @Test
     void search_by_version_label(@TempDir Path tmp) throws Exception {
         LuceneIndex idx = new LuceneIndex(tmp.resolve("idx"));
         DocumentService svc = new DocumentService(new InMemoryDocumentStore(), new InMemoryBlobStore(), idx);

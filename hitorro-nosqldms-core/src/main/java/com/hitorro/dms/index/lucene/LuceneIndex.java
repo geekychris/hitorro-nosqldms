@@ -113,6 +113,27 @@ public class LuceneIndex implements IndexWriter, IndexSearcher {
             if (c.mime != null) lu.add(new StringField("content_refs.mime", c.mime, Field.Store.NO));
         }
 
+        // Catch-all searchable field — title + description + body + every
+        // typed field value concatenated. This is what a bare "chris"
+        // query hits: the query parser defaults to _all so a search that
+        // doesn't specify a field matches anywhere in the doc.
+        StringBuilder all = new StringBuilder();
+        if (doc.title != null)       all.append(doc.title).append(' ');
+        if (doc.description != null) all.append(doc.description).append(' ');
+        if (doc.body != null)        all.append(doc.body).append(' ');
+        if (doc.typeName != null)    all.append(doc.typeName).append(' ');
+        if (doc.typeFields != null) {
+            for (Object v : doc.typeFields.values()) {
+                if (v == null) continue;
+                if (v instanceof java.util.Collection<?> c) {
+                    for (Object it : c) if (it != null) all.append(it).append(' ');
+                } else {
+                    all.append(v).append(' ');
+                }
+            }
+        }
+        if (all.length() > 0) lu.add(new TextField("_all", all.toString(), Field.Store.NO));
+
         // Full JSON in _source for reconstruction without KV round-trip
         try {
             lu.add(new StoredField("_source", JSON.writeValueAsString(doc)));
@@ -153,7 +174,10 @@ public class LuceneIndex implements IndexWriter, IndexSearcher {
         commit();   // make writes visible to a fresh reader
         try (DirectoryReader reader = DirectoryReader.open(dir)) {
             org.apache.lucene.search.IndexSearcher s = new org.apache.lucene.search.IndexSearcher(reader);
-            QueryParser p = new QueryParser("body", analyzer);
+            // Default field is _all (catch-all) so bare queries like "chris"
+            // hit title / body / description / typed fields uniformly.
+            // Users who want a specific field can still say `title:chris`.
+            QueryParser p = new QueryParser("_all", analyzer);
             Query q = p.parse(queryString);
             TopDocs td = s.search(q, limit);
             List<SearchHit> hits = new ArrayList<>(td.scoreDocs.length);

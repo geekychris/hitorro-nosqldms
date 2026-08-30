@@ -65,6 +65,31 @@ export default function DocumentDetailPage() {
     load();
   };
 
+  // Track which version rows are expanded (by versionId).
+  const [expandedVersions, setExpandedVersions] = useState<Set<string>>(new Set());
+  const toggleVersion = (versionId: string) => setExpandedVersions(prev => {
+    const nu = new Set(prev);
+    nu.has(versionId) ? nu.delete(versionId) : nu.add(versionId);
+    return nu;
+  });
+
+  /** Create a new head version whose content is copied from an old one. */
+  const restoreAsHead = async (v: Document) => {
+    if (!id) return;
+    if (!confirm(`Restore ${v.versionLabel} as the new head? A new version will be created with this version's title, body, and typed fields.`)) return;
+    await dms.checkIn(id, {
+      title: v.title,
+      body: v.body,
+      description: v.description,
+      typeName: v.typeName,
+      typeFields: (v.typeFields ?? {}) as Record<string, unknown>,
+      bumpKind: 'MINOR',
+      modifiedBy: 'ui (restore)',
+    });
+    setEditing(false);
+    load();
+  };
+
   const putRendition = async (role: string, file: File) => {
     if (!id || !head) return;
     await dms.putRendition(id, head.versionId, role, file.type || 'application/octet-stream', file);
@@ -160,22 +185,87 @@ export default function DocumentDetailPage() {
       </div>
 
       <div className="card">
-        <h3>Versions ({versions.length})</h3>
+        <h3>Versions ({versions.length}) <span className="meta">— click a row to expand</span></h3>
         <table>
-          <thead><tr><th>Label</th><th>Build</th><th>Kind</th><th>Renditions</th><th>Created</th></tr></thead>
+          <thead><tr>
+            <th style={{ width: 20 }}></th>
+            <th>Label</th><th>Build</th><th>Kind</th><th>Renditions</th><th>Created</th><th></th>
+          </tr></thead>
           <tbody>
-            {versions.map(v => (
-              <tr key={v.versionId}>
-                <td>
-                  {v.versionLabel}
-                  {v.isHead && <span className="badge head" style={{ marginLeft: 6 }}>head</span>}
-                </td>
-                <td>#{v.versionBuild}</td>
-                <td>{v.versionKind}</td>
-                <td className="mono">{v.contentRefs.map(c => c.role).join(', ')}</td>
-                <td className="meta">{v.createdAt?.slice(0, 19)}</td>
-              </tr>
-            ))}
+            {versions.map(v => {
+              const open = expandedVersions.has(v.versionId);
+              const tf = (v.typeFields ?? {}) as Record<string, unknown>;
+              return (
+                <>
+                  <tr key={v.versionId}
+                      style={{ cursor: 'pointer', background: open ? '#fafcff' : undefined }}
+                      onClick={() => toggleVersion(v.versionId)}>
+                    <td>{open ? '▾' : '▸'}</td>
+                    <td>
+                      <b>{v.versionLabel}</b>
+                      {v.isHead && <span className="badge head" style={{ marginLeft: 6 }}>head</span>}
+                    </td>
+                    <td>#{v.versionBuild}</td>
+                    <td>{v.versionKind}</td>
+                    <td className="mono">{v.contentRefs.map(c => c.role).join(', ')}</td>
+                    <td className="meta">{v.createdAt?.slice(0, 19)}</td>
+                    <td onClick={e => e.stopPropagation()}>
+                      {!v.isHead && (
+                        <button className="secondary"
+                                style={{ padding: '2px 8px', fontSize: '0.72rem' }}
+                                onClick={() => restoreAsHead(v)}
+                                title="Create a new head version with this version's content">
+                          Restore as head
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                  {open && (
+                    <tr>
+                      <td colSpan={7} style={{ padding: '10px 20px', background: '#fafcff', borderBottom: '2px solid #dfe4eb' }}>
+                        <div className="meta" style={{ marginBottom: 8 }}>
+                          Snapshot of version <b>{v.versionLabel}</b> (version_id: <span className="mono">{v.versionId}</span>)
+                          {!v.isHead && <span className="badge" style={{ marginLeft: 6 }}>read-only</span>}
+                        </div>
+                        {v.title && <div style={{ marginBottom: 6 }}><b>Title:</b> {v.title}</div>}
+                        {v.body && <div style={{ marginBottom: 6 }}><b>Body:</b><br/><span style={{ whiteSpace: 'pre-wrap' }}>{v.body}</span></div>}
+                        {v.description && <div style={{ marginBottom: 6 }}><b>Description:</b> {v.description}</div>}
+                        {Object.keys(tf).length > 0 && (
+                          <div style={{ marginTop: 8 }}>
+                            <b>Typed fields:</b>
+                            <table style={{ marginTop: 4 }}>
+                              <thead><tr><th>Field</th><th>Value</th></tr></thead>
+                              <tbody>
+                                {Object.entries(tf).map(([k, val]) => {
+                                  const shown = val == null || val === '' ? '—'
+                                              : Array.isArray(val) ? (val as string[]).join(', ')
+                                              : String(val);
+                                  return <tr key={k}><td className="mono">{k}</td><td>{shown}</td></tr>;
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                        {v.contentRefs && v.contentRefs.length > 0 && (
+                          <div style={{ marginTop: 8 }}>
+                            <b>Renditions:</b>
+                            <ul style={{ margin: '4px 0' }}>
+                              {v.contentRefs.map(c => (
+                                <li key={c.role}>
+                                  <b>{c.role}</b> <span className="mono meta">({c.mime}, {c.sizeBytes}b, sha256={c.sha256?.slice(0, 12)}…)</span>
+                                  {' '}
+                                  <a href={`/api/documents/${id}/versions/${v.versionId}/renditions/${c.role}`} target="_blank" rel="noreferrer">↓ bytes</a>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  )}
+                </>
+              );
+            })}
           </tbody>
         </table>
       </div>
