@@ -22,7 +22,7 @@
     <dependencies>
         <dependency>
             <groupId>com.hitorro</groupId>
-            <artifactId>hitorro-dms-core</artifactId>
+            <artifactId>hitorro-nosql-dms-core</artifactId>
             <version>0.1.0</version>
         </dependency>
 

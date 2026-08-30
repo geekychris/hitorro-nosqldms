@@ -27,7 +27,7 @@
     </properties>
 
     <modules>
-        <module>hitorro-dms-core</module>
+        <module>hitorro-nosql-dms-core</module>
         <module>hitorro-dms-spring-boot</module>
     </modules>
 

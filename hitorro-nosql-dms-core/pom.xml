@@ -10,13 +10,16 @@
         <version>0.1.0</version>
     </parent>
 
-    <artifactId>hitorro-dms-core</artifactId>
-    <name>Hitorro DMS (core, framework-neutral)</name>
+    <artifactId>hitorro-nosql-dms-core</artifactId>
+    <name>Hitorro NoSQL DMS (core, framework-neutral)</name>
     <description>
-        Framework-neutral core: types, stores, services, index abstractions.
-        Only depends on Jackson + Lucene. No Spring. Consumers wire it up
-        via DmsContext (standalone), Spring Boot (hitorro-dms-spring-boot),
-        or their own DI container.
+        Framework-neutral core of the NoSQL-backed document management
+        system: types, KV-storage abstractions + in-memory impls, Lucene
+        index, DocumentService. No RDBMS anywhere in the chain — content
+        is content-addressed by sha256, metadata lives in KV keyspaces,
+        search runs off Lucene. Only depends on Jackson + Lucene. No
+        Spring. Consumers wire it up via DmsContext (standalone),
+        Spring Boot (hitorro-dms-spring-boot), or their own DI container.
     </description>
 
     <dependencies>

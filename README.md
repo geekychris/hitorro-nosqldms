@@ -42,15 +42,18 @@ interfaces to persist.
 
 ```
 hitorro-dms/
-├── hitorro-dms-core/          — Spring-neutral core (types, stores, service, index)
+├── hitorro-nosql-dms-core/    — Spring-neutral NoSQL core (types, stores, service, index)
 ├── hitorro-dms-spring-boot/   — Spring Boot 3 runtime: autoconfig + REST + hosts UI
 └── hitorro-dms-web/           — React 18 + Vite + TypeScript UI
 ```
 
-- **`hitorro-dms-core`** — no Spring. `DocumentService`, `VersionLabel`,
-  `LuceneIndex`, `DmsContext` (service registry that mirrors hitorro's
-  `com.hitorro.util.startupframework.ServiceContext` pattern). Depends
-  only on Jackson + Lucene.
+- **`hitorro-nosql-dms-core`** — no Spring, no RDBMS. `DocumentService`,
+  `VersionLabel`, `LuceneIndex`, `DmsContext` (service registry that
+  mirrors hitorro's `com.hitorro.util.startupframework.ServiceContext`
+  pattern). Depends only on Jackson + Lucene. Content lives in a KV
+  keyspace via `BlobStore` (content-addressed by sha256); metadata
+  lives in sibling KV keyspaces via `DocumentStore` / `ReferenceStore` /
+  `FolderStore` / `AclStore` / `TagStore`.
 - **`hitorro-dms-spring-boot`** — pulls core in as a normal dep,
   exposes each service as a Spring bean via `DmsAutoConfiguration`,
   contributes REST controllers. Serves the pre-built React UI from
