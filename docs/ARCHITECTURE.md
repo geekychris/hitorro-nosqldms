@@ -211,7 +211,7 @@ sequenceDiagram
     S->>B: put(bytes) → sha256 (dedups if identical)
     S->>S: replaceOrAppendRendition(manifest, fresh)
   end
-  S->>S: merge typeFields (prev ∪ req; req wins per key)
+  S->>S: merge typeFields — req wins per key over prev
   S->>D: putVersion(new) + putVersion(prev with is_head=false)
   S->>D: setHead(canonicalId, new.versionId)
   S->>I: indexDocument(new) + indexDocument(prev)
