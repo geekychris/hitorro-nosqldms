@@ -1,22 +1,24 @@
 # hitorro-nosqldms — Architecture, Build, & API Reference
 
-Distributed, NoSQL-backed document management system on JVS types +
-KV storage + Lucene. This document covers the architecture, module
-layout, storage model, build process, Java API, and full REST API.
+Distributed, NoSQL-backed document management system on the **JVS type
+system** + KV storage + Lucene. This document covers the architecture,
+module layout, storage model, build process, Java API, and full REST
+API.
 
 - [1. Overview](#1-overview)
 - [2. Module layout](#2-module-layout)
 - [3. Runtime architecture](#3-runtime-architecture)
 - [4. Data model](#4-data-model)
 - [5. Storage layer](#5-storage-layer)
-- [6. Type system](#6-type-system)
+- [6. JVS type system integration](#6-jvs-type-system-integration)
 - [7. Copy-on-write rendition model](#7-copy-on-write-rendition-model)
-- [8. Build & run](#8-build--run)
-- [9. Configuration](#9-configuration)
-- [10. Java API](#10-java-api)
-- [11. REST API](#11-rest-api)
-- [12. Extending](#12-extending)
-- [13. Design notes + tradeoffs](#13-design-notes--tradeoffs)
+- [8. Folders — many-to-many, nested](#8-folders--many-to-many-nested)
+- [9. Build & run](#9-build--run)
+- [10. Configuration](#10-configuration)
+- [11. Java API](#11-java-api)
+- [12. REST API](#12-rest-api)
+- [13. Extending](#13-extending)
+- [14. Design notes + tradeoffs](#14-design-notes--tradeoffs)
 
 ---
 
@@ -24,174 +26,219 @@ layout, storage model, build process, Java API, and full REST API.
 
 ### What it is
 
-An HTTP + web-UI document management service that stores every doc as
-a versioned JVS-typed record with content-addressed binary renditions
-— no RDBMS anywhere. Content lives in a KV keyspace, metadata lives
-in sibling KV keyspaces, search runs off Lucene.
+An HTTP + web-UI document management service where every document is
+a **JVS-typed record** — its type definition (fields, primitive
+kinds, inheritance chain) comes from the shared
+[hitorro-jsontypesystem](https://github.com/geekychris/hitorro-jsontypesystem)
+type registry. Content is content-addressed by sha256, metadata lives
+in KV keyspaces, search runs off Lucene. No RDBMS anywhere.
 
 ### Design principles
 
-1. **NoSQL only.** Every persistent value is either a KV entry (JSON
-   or bytes, keyed by a composite string) or a Lucene index entry
-   (derived, rebuildable). No SQL, no schema migrations, no ORM.
-2. **Framework-neutral core.** All types, storage abstractions, the
+1. **NoSQL only.** Every persistent value is a KV entry (JSON or bytes,
+   keyed by a composite string) or a Lucene index entry (derived,
+   rebuildable). No SQL, no schema migrations, no ORM.
+2. **JVS type system as the source of truth for types.** Every
+   document extends `sysobject` (transitively via `dms_document`) —
+   inheriting the composite `id` (`.did` / `.domain`), `times`
+   (`.created` / `.modified`), and `title`/`body`/`description` MLS
+   fields for free. The DMS does not fork or shadow the type system;
+   it consumes it via `com.hitorro.jsontypesystem.JsonTypeSystem`.
+3. **Framework-neutral core.** All storage abstractions, the
    `DocumentService`, and the Lucene index live in
-   `hitorro-nosqldms-core` — pure Java, only Jackson + Lucene as
-   compile-time deps. Spring is a runtime wrapper, not a requirement.
-3. **Copy-on-write per rendition.** A version's `content_refs`
+   `hitorro-nosqldms-core` — Jackson + Lucene + JVS as the compile-time
+   deps, no Spring.
+4. **Copy-on-write per rendition.** A version's `content_refs`
    manifest is shallow-copied on check-in; only rendition entries
-   that are actually replaced split off new blobs. Metadata-only
-   check-in of a 500 MB doc copies zero bytes.
-4. **Minimal-update principle.** References, folder memberships,
+   that are actually replaced split off new blobs.
+5. **Minimal-update principle.** References, folder memberships,
    ACL grants, and tags each live in their own KV keyspace — never
    on the document body. Adding a citation, granting an ACL, or
    linking to a folder never rewrites the document.
-5. **JVS-typed documents.** Every doc has a `typeName` mapping to a
-   `TypeDef` (JVS-inspired). Field definitions drive the UI's
-   dynamic form + expose per-field query surface in Lucene.
 6. **Content-addressed blobs.** Bytes stored once per unique sha256.
    Identical bytes across two versions dedup to one stored blob.
 
 ## 2. Module layout
 
-```
-hitorro-nosqldms/
-├── pom.xml                                  ← parent (aggregator)
-├── hitorro-nosqldms-core/                   ← framework-neutral core
-│   ├── src/main/java/com/hitorro/dms/
-│   │   ├── model/       Document, VersionLabel, ContentRef, Reference, Grant, FolderMembership, Blob, TypeDef
-│   │   ├── store/       DocumentStore, ReferenceStore, FolderStore, AclStore, TagStore  (interfaces)
-│   │   ├── store/mem/   in-memory impls of all five
-│   │   ├── blob/        BlobStore + InMemoryBlobStore
-│   │   ├── index/       IndexWriter + IndexSearcher interfaces
-│   │   ├── index/lucene/ LuceneIndex (implements both)
-│   │   ├── service/     DocumentService, TypeRegistry, CreateRequest, CheckInRequest
-│   │   └── context/     DmsContext (framework-neutral service registry)
-│   └── src/main/resources/dms-types/  ← bundled JVS type JSONs
-├── hitorro-nosqldms-spring-boot/            ← Spring Boot 3 runtime
-│   ├── src/main/java/com/hitorro/dms/spring/
-│   │   ├── DmsApplication          @SpringBootApplication entry point
-│   │   ├── config/DmsAutoConfiguration + DmsProperties
-│   │   └── web/                    DocumentsController, RenditionsController, FoldersController,
-│   │                               ReferencesController, AclsController, TagsController,
-│   │                               SearchController, TypesController
-│   ├── src/main/resources/application.yml
-│   └── src/main/resources/static/  ← built React UI (populated by pnpm build)
-└── hitorro-nosqldms-web/                    ← React 18 + Vite + TypeScript UI
-    ├── src/
-    │   ├── App.tsx           App shell + router
-    │   ├── api/dms.ts        typed fetch wrapper (one function per REST endpoint)
-    │   ├── components/       TypedFieldsForm (renders a TypeDef as a form)
-    │   └── pages/            Documents / DocumentDetail / Folder / Search
-    └── vite.config.ts        outputs to ../hitorro-nosqldms-spring-boot/…/static/
+```mermaid
+graph LR
+  subgraph hitorro-nosqldms[hitorro-nosqldms - this repo]
+    core[hitorro-nosqldms-core<br/>types + stores + service]
+    spring[hitorro-nosqldms-spring-boot<br/>autoconfig + REST]
+    web[hitorro-nosqldms-web<br/>React 18 + Vite]
+    spring -->|depends on| core
+    web -.->|vite build outputs into<br/>spring/src/main/resources/static/| spring
+  end
+  jvs[hitorro-jsontypesystem<br/>JsonTypeSystem, JVS, Type, Field,<br/>core_sysobject/id/mls/dates JSONs]
+  core -->|depends on| jvs
+  lucene[Apache Lucene 9]
+  jackson[Jackson databind]
+  core --> lucene
+  core --> jackson
 ```
 
-**Dependency direction** (arrows = "depends on"):
+### What each module holds
 
-```
-hitorro-nosqldms-spring-boot ──► hitorro-nosqldms-core
-hitorro-nosqldms-web         ──► (no Java deps; built into spring-boot's static/)
+**`hitorro-nosqldms-core`** — framework-neutral
+- `com.hitorro.dms.model.*` — `Document`, `ContentRef`, `Reference`, `Grant`, `FolderMembership`, `Blob`, `VersionLabel`, `TypeDef` (UI projection)
+- `com.hitorro.dms.store.*` — six store interfaces + `store.mem.*` in-memory impls
+- `com.hitorro.dms.blob.*` — `BlobStore` + `InMemoryBlobStore`
+- `com.hitorro.dms.index.*` — `IndexWriter` / `IndexSearcher` abstractions + `index.lucene.LuceneIndex`
+- `com.hitorro.dms.service.*` — `DocumentService`, `TypeRegistry`, `TypeBootstrap`
+- `com.hitorro.dms.context.*` — `DmsContext` (framework-neutral service registry)
+- `src/main/resources/config/types/*.json` — 6 DMS-owned JVS type JSONs
+
+**`hitorro-nosqldms-spring-boot`** — Spring Boot 3 runtime
+- `DmsApplication` (`@SpringBootApplication` entry point)
+- `config/DmsAutoConfiguration` + `DmsProperties`
+- `web/*Controller` — 8 REST controllers (documents, versions, renditions, folders, references, ACLs, tags, types, search)
+- `src/main/resources/static/` — built React UI
+
+**`hitorro-nosqldms-web`** — React 18 + Vite + TypeScript
+- `App.tsx` + `api/dms.ts` (typed fetch wrapper)
+- `components/TypedFieldsForm.tsx` (renders a JVS type as a dynamic form)
+- `pages/*` — Documents, DocumentDetail, Folder, Search
+
+### Core-types come from the JVS dependency, not vendored
+
+```mermaid
+graph LR
+  jvsjar[hitorro-jsontypesystem jar<br/>config/types/core_*.json]
+  dmscore[hitorro-nosqldms-core jar<br/>config/types/dms_*.json]
+  disk[$HT_BIN/config/types/<br/>on disk at runtime]
+  jsontypesys[JsonTypeSystem<br/>getMe.getType]
+  jvsjar -->|extracted at boot| disk
+  dmscore -->|extracted at boot| disk
+  disk -->|scanned by| jsontypesys
 ```
 
-The core is deliberately **the only thing you MUST use**. Spring Boot
-is a convenience wrapper. The UI is optional (headless deployments
-can skip it and hit REST directly).
+At startup `TypeBootstrap.bootstrap(home)` extracts every bundled
+`config/types/*.json` from the classpath (whichever jar ships it) to
+`$home/config/types/` and sets the `HT_BIN` system property. The JVS
+`JsonTypeSystem.getMe()` singleton then discovers types via its
+filesystem convention. Operators can drop their own `dms_*.json`
+into that same dir and they're picked up on next boot.
 
 ## 3. Runtime architecture
 
 ### Three-tier structure
 
-```
-┌──────────────────────────────────────┐
-│   Web UI (React 18)                  │  Served from static/ inside the Spring Boot jar
-│   - Docs list w/ type filter         │  Talks to REST at /api/*
-│   - Document detail w/ dynamic form  │
-│   - Folder browser + Search          │
-└──────────────────────────────────────┘
-                  │  HTTP (JSON + binary)
-                  ▼
-┌──────────────────────────────────────┐
-│   REST controllers (Spring MVC)      │  hitorro-nosqldms-spring-boot
-│   - DocumentsController              │
-│   - RenditionsController             │
-│   - FoldersController                │
-│   - ReferencesController             │
-│   - AclsController                   │
-│   - TagsController                   │
-│   - TypesController                  │
-│   - SearchController                 │
-└──────────────────────────────────────┘
-                  │  Java method calls
-                  ▼
-┌──────────────────────────────────────┐
-│   Service layer                      │  hitorro-nosqldms-core
-│   - DocumentService (orchestrator)   │  Framework-neutral. Also usable
-│   - TypeRegistry                     │  standalone via DmsContext.
-│   - DmsContext (service registry)    │
-└──────────────────────────────────────┘
-                  │
-        ┌─────────┼──────────┐
-        ▼         ▼          ▼
-   ┌─────────┐ ┌────────┐ ┌────────────┐
-   │ KV      │ │ Blobs  │ │ Lucene idx │
-   │ stores  │ │ (sha256│ │ (derived)  │
-   │ (5)     │ │  addr) │ │            │
-   └─────────┘ └────────┘ └────────────┘
+```mermaid
+graph TB
+  subgraph browser[Browser]
+    ui[React UI<br/>Documents / Detail / Folder / Search]
+  end
+  subgraph jvm[Single JVM per node]
+    subgraph restlayer[REST controllers - Spring MVC]
+      docsc[DocumentsController]
+      rendc[RenditionsController]
+      foldc[FoldersController]
+      refsc[ReferencesController]
+      aclsc[AclsController]
+      tagsc[TagsController]
+      typesc[TypesController]
+      searchc[SearchController]
+    end
+    subgraph service[Service layer - framework neutral]
+      docsvc[DocumentService]
+      typereg[TypeRegistry]
+      dmsctx[DmsContext]
+    end
+    subgraph jvsblock[JVS type system]
+      jsontypesys[JsonTypeSystem]
+      typecache[Type cache]
+    end
+    subgraph storage[Storage backends]
+      kv[6 KV stores<br/>InMemory phase 1]
+      blob[BlobStore<br/>content addressed]
+      lucene[Lucene index<br/>persistent]
+    end
+  end
+  ui -->|HTTP JSON + binary| restlayer
+  restlayer --> service
+  typereg --> jsontypesys
+  jsontypesys --> typecache
+  docsvc --> kv
+  docsvc --> blob
+  docsvc --> lucene
 ```
 
 ### Request lifecycle — create a doc
 
+```mermaid
+sequenceDiagram
+  autonumber
+  participant U as UI
+  participant C as DocumentsController
+  participant S as DocumentService
+  participant B as BlobStore
+  participant D as DocumentStore
+  participant I as IndexWriter
+  U->>C: POST /api/documents (CreateRequest with typeName + typeFields)
+  C->>S: create(req)
+  S->>S: mint canonicalId (doc-uuid) + versionId (ver-uuid)
+  S->>S: build Document POJO (title, body, typeName, typeFields, ...)
+  loop each rendition
+    S->>B: put(bytes, mime) → sha256
+    S->>S: append ContentRef(role, sha256, sourceVersionId)
+  end
+  S->>D: putVersion(doc) [v-canonical-label KV entry]
+  S->>D: setHead(canonicalId, versionId) [d-canonical KV entry]
+  S->>I: indexDocument(doc) [Lucene: title, body, typed fields, _all]
+  S-->>C: Document
+  C-->>U: 200 OK + Document JSON
 ```
-POST /api/documents
-  → DocumentsController.create(req)                (REST)
-  → DocumentService.create(req)                    (core service)
-      ├─ mint canonicalId + versionId
-      ├─ build Document POJO (title, body, typeName, typeFields, …)
-      ├─ for each rendition in req:
-      │    BlobStore.put(bytes) → sha256           (content-addressed)
-      │    append ContentRef(role, sha256, …)      to Document
-      ├─ DocumentStore.putVersion(doc)             (v|canonical|label KV entry)
-      ├─ DocumentStore.setHead(canonicalId, verId) (d|canonical KV entry)
-      └─ IndexWriter.indexDocument(doc)            (Lucene: title, body, typed fields, _all catchall)
-  ← ResponseEntity<Document>
+
+### Request lifecycle — check-in a new version (copy-on-write)
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant U as UI
+  participant C as DocumentsController
+  participant S as DocumentService
+  participant B as BlobStore
+  participant D as DocumentStore
+  participant I as IndexWriter
+  U->>C: POST /documents/{id}/versions (CheckInRequest)
+  C->>S: checkIn(req)
+  S->>D: getHead(canonicalId)
+  D-->>S: prev head doc
+  S->>S: bump VersionLabel per Kind
+  S->>S: shallowCopyManifest(prev.content_refs)
+  Note over S: Every entry keeps its sha256 → shared blob<br/>Zero bytes copied for metadata-only bumps
+  loop each replacement rendition in req
+    S->>B: put(bytes) → sha256 (dedups if identical)
+    S->>S: replaceOrAppendRendition(manifest, fresh)
+  end
+  S->>S: merge typeFields (prev ∪ req; req wins per key)
+  S->>D: putVersion(new) + putVersion(prev with is_head=false)
+  S->>D: setHead(canonicalId, new.versionId)
+  S->>I: indexDocument(new) + indexDocument(prev)
+  S-->>C: Document
+  C-->>U: 200 OK
 ```
 
 ### Request lifecycle — search
 
-```
-GET /api/search?q=chris
-  → SearchController.search(q, limit)
-  → IndexSearcher.search(q, limit)
-      ├─ QueryParser (default field = _all)
-      ├─ Lucene TopDocs
-      └─ map to SearchHit records
-  ← List<SearchHit>
-```
-
-### Request lifecycle — check-in new version
-
-```
-POST /api/documents/{id}/versions
-  → DocumentsController.checkIn(id, req)
-  → DocumentService.checkIn(req)
-      ├─ load previous head from DocumentStore
-      ├─ compute next VersionLabel via bump(kind, qualifier)
-      ├─ build new Document; content_refs = shallowCopyManifest(head.content_refs)
-      ├─ for each replacement rendition in req:
-      │    BlobStore.put(bytes)  (dedups if identical bytes exist)
-      │    replaceOrAppendRendition on the manifest
-      ├─ merge typeFields: head's ∪ request's (request wins per key)
-      ├─ mark new as head; demote old
-      ├─ DocumentStore.putVersion(nu) + setHead(canonical, nu.versionId)
-      ├─ DocumentStore.putVersion(head) (rewrite w/ is_head=false)
-      └─ IndexWriter.indexDocument(nu) + indexDocument(head)
+```mermaid
+sequenceDiagram
+  autonumber
+  participant U as UI
+  participant C as SearchController
+  participant IS as IndexSearcher (Lucene)
+  U->>C: GET /api/search?q=chris
+  C->>IS: search(q, limit)
+  Note over IS: QueryParser default field = _all<br/>_all = title + body + description + typeName + typed fields
+  IS-->>C: List<SearchHit>
+  C-->>U: 200 OK + JSON array
 ```
 
 ## 4. Data model
 
-### Document
+### Document (POJO wire format)
 
-The primary POJO. See
+The primary POJO — see
 [`Document.java`](../hitorro-nosqldms-core/src/main/java/com/hitorro/dms/model/Document.java).
 
 | Field | Type | Purpose |
@@ -208,12 +255,18 @@ The primary POJO. See
 | `isHead` | boolean | Denormalised: true iff current head. |
 | `isStable` | boolean | Denormalised: `versionQualifier == null`. |
 | `title`, `body`, `description` | String | Content-defining metadata. |
-| `contentType` | String | `wiki-page` / `task` / `contact` / `folder` / … |
-| `typeName` | String | Registered `TypeDef.name`. Defaults to `contentType`. |
-| `typeFields` | `Map<String,Object>` | Type-specific field values (opaque, round-tripped verbatim). |
+| `contentType` | String | Registered JVS type name (`dms_wiki_page` / `dms_task` / …). |
+| `typeName` | String | Registered JVS type name (same as `contentType` unless overridden). |
+| `typeFields` | `Map<String,Object>` | Type-specific field values (matches the field defs on the JVS Type). |
 | `contentRefs` | `List<ContentRef>` | Rendition manifest (copy-on-write). |
 | `tombstoned` | boolean | Soft-delete marker. |
 | `createdBy`, `modifiedBy`, `createdAt`, `modifiedAt` | | Audit. |
+
+**Phase-1 note:** the `Document` POJO's `canonicalId` is a flat string.
+The JVS `sysobject` type declares a composite `id` with `.did` +
+`.domain`. Phase 2 will make the wire format the JsonNode form emitted
+by `JVS.getJsonNode()` — the current POJO getters map (`canonicalId` →
+`id.did`) but the on-the-wire shape is still flat for now.
 
 ### ContentRef (a rendition entry)
 
@@ -250,29 +303,39 @@ Not stored on the `Document`; each lives in its own store.
 
 The in-memory impls default in phase 1. Every interface is designed
 so a RocksDB-backed impl is a drop-in replacement — see
-[Extending](#12-extending).
+[Extending](#13-extending).
 
-### KV key encoding (design target for a persistent impl)
+### KV keyspaces (design target for the persistent impl)
 
-The KV layout that the in-memory impls simulate:
+```mermaid
+graph LR
+  subgraph doc[Document storage]
+    dHead["d - canonical<br/>→ versionId"]
+    vBody["v - canonical - label<br/>→ Document JSON"]
+    lLookup["l - canonical - versionId<br/>→ label"]
+    tStone["t - canonical<br/>→ tombstone"]
+  end
+  subgraph ext[External-to-doc keyspaces]
+    rOut["r - from - kind - to<br/>→ Reference"]
+    brIn["br - to - kind - from<br/>→ Reference"]
+    fMem["f - folder - child<br/>→ FolderMembership"]
+    dfInv["df - child - folder<br/>→ FolderMembership"]
+    aGrant["a - canonical - principal<br/>→ Grant"]
+    gInv["g - principal - canonical<br/>→ Grant"]
+    tag["tag - canonical - tag<br/>→ tag record"]
+  end
+  subgraph blob[Blob storage]
+    bMeta["b - sha256<br/>→ Blob metadata"]
+    blobBody["blob-body - sha256<br/>→ raw bytes"]
+  end
+```
 
-| Key pattern | Value | Purpose |
-|---|---|---|
-| `d\|{canonical}` | version id | Head pointer |
-| `v\|{canonical}\|{label}` | JVS doc bytes | The version |
-| `l\|{canonical}\|{versionId}` | label | Reverse lookup |
-| `r\|{from}\|{kind}\|{to}` | reference metadata | Outbound refs |
-| `br\|{to}\|{kind}\|{from}` | reference metadata | Back-refs |
-| `f\|{folder}\|{child}` | membership | Folder → child |
-| `df\|{child}\|{folder}` | membership | Child → folder |
-| `a\|{canonical}\|{principal}` | grant | ACL entry |
-| `g\|{principal}\|{canonical}` | grant | Reverse ACL |
-| `t\|{canonical}` | tombstone marker | Soft delete |
-| `b\|{sha256}` | blob metadata | Content-addressed blob header |
-| `blob-body\|{sha256}` | raw bytes | Small/medium blob body |
-| `tag\|{canonical}\|{tag}` | tag record | Tags |
+The core insight: **each concern gets its own keyspace, addressed by
+prefix**. Adding a reference is 2 KV writes (`r|` + `br|`), doc body
+untouched. Adding an ACL is 2 writes (`a|` + `g|`), doc untouched.
+Linking to a folder is 2 writes (`f|` + `df|`), doc untouched.
 
-### Lucene index
+### Lucene fields
 
 `LuceneIndex` implements both `IndexWriter` and `IndexSearcher`.
 Fields written per version:
@@ -291,65 +354,128 @@ document. Explicit field queries (`title:chris`, `tf.status:open`,
 
 Idempotent updates via `updateDocument(new Term("version_id", …))`.
 
-## 6. Type system
+## 6. JVS type system integration
 
-Every document has a `typeName` mapping to a `TypeDef` registered in
-the `TypeRegistry`.
+Every document in this DMS **is** a JVS-typed record. The type system
+is the shared `com.hitorro.jsontypesystem` module — this DMS consumes
+it as a compile dep, doesn't fork or shadow it.
 
-### TypeDef
+### Type inheritance
+
+```mermaid
+graph BT
+  sysobject["sysobject<br/>{ id, times, title.mls, body.mls, description.mls }"]
+  dmsdoc["dms_document<br/>adds: canonical_id, version_*, content_refs, tombstoned, ..."]
+  wiki["dms_wiki_page<br/>adds: summary, author_alias, status, tags"]
+  task["dms_task<br/>adds: assignee, status, priority, due_date, estimate_h, labels"]
+  contact["dms_contact<br/>adds: first_name, last_name, organization, email, phone, website, notes"]
+  folder["dms_folder<br/>adds: purpose, owner"]
+  dmsdoc -->|super| sysobject
+  wiki -->|super| dmsdoc
+  task -->|super| dmsdoc
+  contact -->|super| dmsdoc
+  folder -->|super| dmsdoc
+```
+
+Every leaf DMS type transitively inherits sysobject's composite `id`
+(`.did` / `.domain`), `times` (`.created` / `.modified`), and MLS
+(`title` / `body` / `description`) fields for free. `JsonTypeSystem`
+resolves inherited fields on lookup via `Type.getSuper()` recursion.
+
+### Types provided by each jar
+
+The core JVS types belong to the `hitorro-jsontypesystem` jar
+(upstream fix). The DMS types belong to this project. Neither is
+vendored into the other.
+
+| Type | Jar | Purpose |
+|---|---|---|
+| `sysobject`, `id`, `mls`, `mlselem`, `dates`, `date`, `string`, `long`, `boolean`, `url` | `hitorro-jsontypesystem-3.0.1.jar` | Core JVS types — every JVS user needs these |
+| `dms_content_ref`, `dms_document`, `dms_wiki_page`, `dms_task`, `dms_contact`, `dms_folder` | `hitorro-nosqldms-core-0.1.0.jar` | DMS-specific types |
+
+### Bootstrap sequence
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant App as DmsApplication (Spring)
+  participant AC as DmsAutoConfiguration
+  participant Ctx as DmsContext
+  participant Boot as TypeBootstrap
+  participant Cp as Classpath (both jars)
+  participant Fs as $home/config/types/
+  participant Jts as JsonTypeSystem
+  App->>AC: Spring startup
+  AC->>Ctx: builder().withTypesDir(home).build()
+  Ctx->>Boot: bootstrap(home)
+  loop for each known filename
+    Boot->>Cp: getResourceAsStream(config/types/{name}.json)
+    Cp-->>Boot: bytes (from whichever jar ships it)
+    Boot->>Fs: Files.copy(bytes, home/config/types/{name}.json)
+  end
+  Boot->>Jts: System.setProperty(HT_BIN, home)
+  Ctx-->>App: DmsContext ready
+  Note over Jts: JsonTypeSystem.getMe() lazy-loads<br/>types from $HT_BIN/config/types/ on demand
+```
+
+### `TypeRegistry` — the facade
+
+`TypeRegistry` is a thin projection over `JsonTypeSystem` that gives
+the UI a stable shape:
+
+```mermaid
+graph LR
+  jts[JsonTypeSystem.getMe]
+  type[Type - JVS metadata]
+  field[Field - fname, jvs-type, vector, groups]
+  reg[TypeRegistry]
+  tdef[TypeDef - UI projection]
+  ffdef[FieldDef with UI kind]
+  form[TypedFieldsForm - React]
+  jts -->|getType name| type
+  type -->|getField / getSuper| field
+  reg -->|calls| jts
+  reg -->|projects| tdef
+  tdef -->|contains| ffdef
+  form -->|renders| tdef
+```
+
+**Projection rules:**
+- The DMS lists 4 types in the UI (`dms_wiki_page`, `dms_task`, `dms_contact`, `dms_folder`) — the rest are structural.
+- Structural fields inherited from `sysobject` (`id`, `title`, `body`, …) and `dms_document` (versioning + content_refs) are **excluded** from the type form — the DMS manages those, not the user.
+- Field kind is derived from the JVS primitive: `core_string` → `string`, `core_mls` → `text`, `core_url` → `url`, `core_long` → `long`, `core_double` → `double`, `core_date` → `date`, `core_boolean` → `boolean`, plus `array<…>` prefix when `vector: true`.
+- Enum kinds are inferred from a field's `description` prefix (`"Enum-like: a / b / c"`) — a cheap convention that keeps the JSON simple.
+
+### Example — the `dms_task` type
 
 ```json
 {
-  "name":  "task",
-  "title": "Task",
-  "description": "A single unit of work with an owner, status, and priority.",
+  "name": "dms_task",
+  "description": "A single unit of work — extends dms_document.",
+  "super": "dms_document",
   "fields": [
-    { "name":"assignee", "kind":"string", "label":"Assignee", "required":true },
-    { "name":"status",   "kind":"enum",   "label":"Status",
-      "choices":["todo","in-progress","blocked","done"], "required":true },
-    { "name":"priority", "kind":"enum",   "label":"Priority",
-      "choices":["low","medium","high","urgent"] },
-    { "name":"due_date", "kind":"date",   "label":"Due date" },
-    { "name":"estimate_h","kind":"double","label":"Estimate (hours)" },
-    { "name":"labels",   "kind":"array<string>", "label":"Labels" }
+    { "name": "assignee", "type": "core_string",
+      "groups": [{"name":"index","method":"identifier"}] },
+    { "name": "status",   "type": "core_string",
+      "description": "Enum-like: todo / in-progress / blocked / done.",
+      "groups": [{"name":"index","method":"identifier"}] },
+    { "name": "priority", "type": "core_string",
+      "description": "Enum-like: low / medium / high / urgent.",
+      "groups": [{"name":"index","method":"identifier"}] },
+    { "name": "due_date",   "type": "core_date" },
+    { "name": "estimate_h", "type": "core_double" },
+    { "name": "labels",     "type": "core_string", "vector": true,
+      "groups": [{"name":"index","method":"identifier"}] }
   ]
 }
 ```
 
-### Field kinds
-
-| Kind | UI widget | Storage |
-|---|---|---|
-| `string` | Text input | String |
-| `text` | Textarea (multi-line) | String |
-| `long` | Number input (integer) | Long |
-| `double` | Number input | Double |
-| `boolean` | Checkbox | Boolean |
-| `date` | Date input | ISO date string |
-| `url` | URL input | String |
-| `enum` | Dropdown (from `choices`) | String |
-| `array<string>` | Comma-separated text input | List<String> |
-
-Unknown kinds fall back to a plain text input. The UI's
-`TypedFieldsForm` component enumerates the widget per kind — extend
-it to add more.
-
-### Registry loading
-
-`TypeRegistry` reads bundled types from `classpath:dms-types/*.json`
-at startup. An optional user overlay dir (`dms.types-dir` property,
-defaults to `${dms.home}/types`) is loaded on top — same-named files
-override bundled ones.
-
-Bundled types out of the box: `wiki-page`, `task`, `contact`,
-`folder`.
-
-### Query surface
-
-Typed field values are indexed as `tf.<name>` — Lucene classic query
-parser understands e.g. `tf.status:in-progress AND tf.priority:high`.
-The `_all` catchall also includes typed values so bare queries hit
-them.
+At runtime `TypeRegistry.get("dms_task")` projects this into a
+`TypeDef` — 6 UI-friendly `FieldDef`s (structural fields inherited
+from super chain are filtered out) — which the React
+`TypedFieldsForm` renders as a form (text input for assignee, enum
+dropdown for status/priority from the parsed choices, date input,
+number input, comma-separated multi-string input).
 
 ## 7. Copy-on-write rendition model
 
@@ -372,7 +498,7 @@ v2.content_refs = [
 
 # Now PUT a new primary rendition on v2:
 v2.content_refs = [
-    {role: primary,   sha256: B, sourceVersionId: v2},   ← SPLIT — new blob, new source
+    {role: primary,   sha256: B, sourceVersionId: v2},   ← SPLIT
     {role: thumbnail, sha256: T, sourceVersionId: v1},   ← still shared
     {role: extract,   sha256: X, sourceVersionId: v1}    ← still shared
 ]
@@ -382,17 +508,83 @@ v2.content_refs = [
 `sha256` for that role. No separate sharing bookkeeping needed —
 content-address IS the sharing token.
 
+```mermaid
+graph LR
+  subgraph v1["v1 (metadata title=old)"]
+    v1p["primary: sha256=A"]
+    v1t["thumbnail: sha256=T"]
+    v1e["extract: sha256=X"]
+  end
+  subgraph v2["v2 (metadata-only bump)"]
+    v2p["primary: sha256=A"]
+    v2t["thumbnail: sha256=T"]
+    v2e["extract: sha256=X"]
+  end
+  subgraph v3["v3 (replaces primary)"]
+    v3p["primary: sha256=B ★NEW★"]
+    v3t["thumbnail: sha256=T"]
+    v3e["extract: sha256=X"]
+  end
+  subgraph blob[Blob store]
+    A["sha256=A<br/>original primary bytes"]
+    T["sha256=T<br/>thumbnail bytes"]
+    X["sha256=X<br/>extract text"]
+    B["sha256=B<br/>new primary bytes"]
+  end
+  v1p --> A
+  v2p --> A
+  v3p --> B
+  v1t --> T
+  v2t --> T
+  v3t --> T
+  v1e --> X
+  v2e --> X
+  v3e --> X
+```
+
 `DocumentService.attachRendition(...)` mutates a specific version's
 manifest without bumping the version — used by pipelines (e.g. a
 thumbnail worker) to attach derived renditions after the fact.
 
-## 8. Build & run
+## 8. Folders — many-to-many, nested
+
+Folders are documents. Membership is a separate KV keyspace so it
+never rewrites either the folder or the child. A doc can be in any
+number of folders; folders can nest arbitrarily.
+
+```mermaid
+graph TB
+  root[Root - no parent]
+  eng[Engineering<br/>dms_folder]
+  archive[Archive<br/>dms_folder]
+  backend[Backend<br/>dms_folder]
+  ship[Ship v0.2<br/>dms_task]
+  wiki[Getting started<br/>dms_wiki_page]
+  root --> eng
+  root --> archive
+  eng -->|contains| backend
+  eng -->|contains| ship
+  archive -.->|also contains| ship
+  eng -->|contains| wiki
+```
+
+- **`Ship v0.2`** is linked into **both** Engineering and Archive
+  simultaneously — that's the many-to-many property.
+- **`Backend`** is a `dms_folder` inside another `dms_folder` — nesting.
+- Membership is stored twice for cheap prefix scans in both
+  directions: `f|folder|child` (list contents) + `df|child|folder`
+  (list containing folders). Add is 2 writes; remove is 2 deletes;
+  neither touches the folder body or the child body.
+
+## 9. Build & run
 
 ### Prerequisites
 
 - **Java 21+** on `$PATH`
 - **Maven 3.9+**
 - **pnpm** (or npm) for the React UI
+- **`hitorro-jsontypesystem` 3.0.1** installed in `~/.m2` (build it once from
+  its own repo if you don't have it)
 
 ### Full build
 
@@ -407,7 +599,7 @@ cd hitorro-nosqldms
 mvn install
 ```
 
-**Test summary:** 63 core tests + 5 Spring integration tests = 68 total.
+**Test summary:** 67 core tests + 5 Spring integration tests = 72 total.
 
 ### Run standalone (single-node)
 
@@ -417,76 +609,72 @@ java -jar hitorro-nosqldms-spring-boot/target/hitorro-nosqldms-spring-boot-0.1.0
 # then open http://localhost:8090
 ```
 
-Storage is in-memory by default; data goes away when the process
-stops. To persist Lucene data across restarts, keep `dms.home`
-pointing at a stable directory (Lucene lives under `${dms.home}/lucene`).
+On first boot, the bundled JVS type JSONs (both core and DMS) are
+extracted to `${dms.home}/config/types/` — you'll see files like
+`core_sysobject.json`, `dms_document.json`, `dms_wiki_page.json` land
+on disk. That's the JVS convention: `HT_BIN/config/types/*.json` is
+where `JsonTypeSystem` looks for types.
 
-The other five stores (Document / Reference / Folder / ACL / Tag /
-Blob) are in-memory only in phase 1 — you'll lose them on restart
-until a persistent impl is wired in (see [Extending](#12-extending)).
+Storage is in-memory by default — data doesn't survive restart
+(phase-1 limitation). Lucene index alone is persistent under
+`${dms.home}/lucene/`.
 
 ### Standalone (framework-neutral, no HTTP)
 
-Embed the core inside another Java app or use it from a script:
+Embed the core inside another Java app:
 
 ```java
 try (DmsContext ctx = DmsContext.builder()
         .withLucene(Path.of("/tmp/idx"))
-        .withTypesDir(Path.of("/etc/mydms/types"))   // optional user overlay
+        .withTypesDir(Path.of("/var/mydms"))   // JVS HT_BIN root
         .build()) {
+
+    // TypeBootstrap already ran inside build() —
+    // JsonTypeSystem is loaded and has all types visible.
 
     DocumentService svc = ctx.documentService();
 
     CreateRequest req = new CreateRequest();
     req.title = "Ship v0.2";
-    req.contentType = "task";
-    req.typeName = "task";
+    req.contentType = "dms_task";
+    req.typeName = "dms_task";
     req.typeFields = Map.of("assignee", "alice", "status", "todo");
     req.createdBy = "cli";
     Document v1 = svc.create(req);
 
-    // Later, from anywhere:
-    Document head = svc.getHead(v1.canonicalId).orElseThrow();
+    // Direct JVS access — the type is real, inheritance is honoured
+    Type taskType = ctx.typeRegistry().jvsType("dms_task").orElseThrow();
+    assert taskType.getSuper().getName().equals("dms_document");
+    assert taskType.getField("title") != null;   // inherited from sysobject
 }
 ```
 
 ### Dev mode (hot-reload the UI)
 
-The UI's `vite dev` server proxies API calls to the backend:
-
 ```bash
-# Terminal 1 — run the backend on :8090
+# Terminal 1 — backend on :8090
 java -jar hitorro-nosqldms-spring-boot/target/*app.jar
 
-# Terminal 2 — run the UI dev server on :5174 with hot-reload
+# Terminal 2 — UI dev server on :5174, proxies /api → :8090
 cd hitorro-nosqldms-web && pnpm dev
-# open http://localhost:5174
 ```
 
-## 9. Configuration
+## 10. Configuration
 
-Standard Spring Boot properties. Configure via `application.yml`
-(inside the jar), external `application-*.yml`, env vars, or
-command-line `--flag=value`.
+Standard Spring Boot properties.
 
 | Key | Default | Purpose |
 |---|---|---|
 | `server.port` | `8090` | HTTP port |
-| `dms.home` | `${user.home}/.hitorro/dms` | Persistent storage root |
+| `dms.home` | `${user.home}/.hitorro/dms` | Persistent storage root — becomes HT_BIN for JVS |
 | `dms.lucene-enabled` | `true` | Toggle Lucene index |
 | `dms.lucene-dir` | `${dms.home}/lucene` | Override index location |
-| `dms.types-dir` | `${dms.home}/types` | User type-def overlay dir (optional) |
+| `dms.types-dir` | `${dms.home}` | Override JVS HT_BIN root — `config/types/` lives underneath |
 
-Example running on port 9000 with a custom types directory:
+Drop your own type JSONs into `${dms.home}/config/types/dms_myNewType.json` and
+they're picked up on next boot.
 
-```bash
-java -jar hitorro-nosqldms-spring-boot-0.1.0-app.jar \
-    --server.port=9000 \
-    --dms.home=/var/dms \
-    --dms.types-dir=/etc/dms/types
-```
-
-## 10. Java API
+## 11. Java API
 
 Everything in this section lives in `hitorro-nosqldms-core` and is
 framework-independent.
@@ -501,13 +689,13 @@ object owns the wired-up services, hand out via typed accessors.
 // Zero-config: all in-memory, no Lucene index.
 DmsContext ctx = DmsContext.inMemory();
 
-// Fluent builder — swap any store, add Lucene, add a types overlay:
+// Fluent builder — swap any store, add Lucene, set types dir:
 DmsContext ctx = DmsContext.builder()
-        .documentStore(myCustomDocumentStore)   // else: InMemoryDocumentStore
-        .blobStore(myS3BlobStore)               // else: InMemoryBlobStore
-        .withLucene(Path.of("/var/dms/lucene")) // else: IndexWriter.NOOP
-        .withTypesDir(Path.of("/etc/dms/types"))
-        .with(MyExtra.class, myExtra)           // register anything else
+        .documentStore(myCustomDocumentStore)
+        .blobStore(myS3BlobStore)
+        .withLucene(Path.of("/var/dms/lucene"))
+        .withTypesDir(Path.of("/var/dms"))     // JVS HT_BIN root
+        .with(MyExtra.class, myExtra)
         .build();
 
 // Accessors:
@@ -522,32 +710,62 @@ BlobStore       blobs   = ctx.blobStore();
 IndexWriter     writer  = ctx.indexWriter();
 IndexSearcher   search  = ctx.indexSearcher();
 
-MyExtra x = ctx.get(MyExtra.class);              // for user-registered extras
+ctx.close();     // closes Lucene if attached
+```
 
-ctx.close();                                     // closes Lucene if attached
+### `TypeBootstrap` — how types get onto disk
+
+Called automatically by `DmsContext.build()`. Extracts bundled
+classpath types to `$home/config/types/` and sets `HT_BIN` so
+`JsonTypeSystem` finds them.
+
+```java
+// Manual invocation (rare — DmsContext does this for you)
+List<String> extracted = TypeBootstrap.bootstrap(Path.of("/var/mydms"));
+// extracted → ["core_sysobject", "core_id", ..., "dms_wiki_page", ...]
+
+Type wikiType = TypeBootstrap.type("dms_wiki_page");
+// = JsonTypeSystem.getMe().getType("dms_wiki_page")
+```
+
+### `TypeRegistry` — projection facade
+
+```java
+TypeRegistry r = ctx.typeRegistry();
+
+// UI-friendly projection
+List<TypeDef>     types = r.all();          // 4 DMS types
+Optional<TypeDef> task  = r.get("dms_task");
+
+// Escape hatch — raw JVS Type
+Optional<Type> jvs = r.jvsType("dms_task");
+Type t = jvs.orElseThrow();
+Type superT = t.getSuper();                 // dms_document
+Type grandT = superT.getSuper();            // sysobject
+Field assignee = t.getField("assignee");
+Field title    = t.getField("title");       // resolves through super to sysobject
+boolean isVec  = t.getField("labels").isVector();
+
+// Light validation — required-field check
+List<String> errs = r.validate("dms_task", Map.of("priority", "high"));
+// errs includes "required field missing: assignee" (if that field was marked required)
 ```
 
 ### `DocumentService`
-
-The orchestrator. Every method that mutates commits to KV, blob store,
-and index atomically (from the caller's perspective — errors mid-flow
-throw, no partial writes surface).
 
 ```java
 // Create — mints doc-<uuid> canonical + ver-<uuid> version at 1.0.0
 Document create(CreateRequest req) throws IOException;
 
 // Check in a new version. Copy-on-write per rendition.
-// bumpKind = MAJOR / MINOR / PATCH / QUALIFIER (default MINOR)
 Document checkIn(CheckInRequest req) throws IOException;
 
 // Attach a rendition to a specific EXISTING version — no version bump.
-// Used by pipelines that compute derived renditions.
 Document attachRendition(String canonicalId, String versionId,
                          String role, String mime, byte[] bytes,
                          String generatedBy, String derivedFromRole) throws IOException;
 
-// Remove one rendition from one version. Blob refcount drops; GC eventually sweeps.
+// Remove one rendition from one version.
 void deleteRendition(String canonicalId, String versionId, String role) throws IOException;
 
 // Fetch bytes of one rendition on one version.
@@ -560,33 +778,28 @@ void tombstone(String canonicalId);
 Optional<Document> getHead(String canonicalId);
 Optional<Document> getVersion(String canonicalId, String versionLabel);
 Optional<Document> getVersionById(String versionId);
-List<Document>    listVersions(String canonicalId);   // insertion order
+List<Document>    listVersions(String canonicalId);
 List<String>      listCanonicals();
 ```
 
 ### `CreateRequest` / `CheckInRequest`
 
-Simple POJOs. Every field is optional except the caller-supplied
-required fields (`title`, `canonicalId`, etc.).
-
 ```java
 CreateRequest c = new CreateRequest();
 c.title       = "Spec";
 c.body        = "Long body text.";
-c.description = "One-liner.";
-c.contentType = "task";
-c.typeName    = "task";        // defaults to contentType if null
+c.contentType = "dms_task";       // registered JVS type name
+c.typeName    = "dms_task";
 c.typeFields  = Map.of("assignee", "alice", "status", "todo");
 c.createdBy   = "user:alice";
 c.withRendition("primary", "text/plain", "hello".getBytes());
-// c.withRendition(...) adds to the .renditions Map
 Document v1 = svc.create(c);
 
 CheckInRequest ci = new CheckInRequest();
 ci.canonicalId = v1.canonicalId;
-ci.title       = "Spec v2";     // overrides prev head; nulls INHERIT from prev
+ci.title       = "Spec v2";
 ci.bumpKind    = VersionLabel.Kind.MINOR;   // default
-ci.qualifier   = "beta";        // optional — enters pre-release cycle
+ci.qualifier   = "beta";                    // optional — enters pre-release cycle
 ci.typeFields  = Map.of("status", "in-progress");   // merged with prev head
 ci.withRendition("primary", "image/jpeg", newBytes);   // replaces primary; other renditions still shared
 Document v2 = svc.checkIn(ci);
@@ -594,8 +807,7 @@ Document v2 = svc.checkIn(ci);
 
 **Merge semantics for `typeFields`:** the new version's fields are
 `prev.typeFields ∪ req.typeFields` with request keys taking precedence.
-To clear a field entirely, pass it as `null` in the request map. To
-keep a field, omit it — it inherits from the previous head.
+Omitted keys inherit from the previous head.
 
 ### `VersionLabel`
 
@@ -603,7 +815,6 @@ Immutable, comparable, parseable.
 
 ```java
 VersionLabel l = VersionLabel.parse("2.1.3-alpha3+45");
-// l.major=2, l.minor=1, l.patch=3, l.qualifier="alpha", l.qualNumber=3, l.build=45
 l.isStable();               // false
 l.label();                  // "2.1.3-alpha3+45"
 
@@ -615,35 +826,17 @@ l.bump(Kind.QUALIFIER);     // → 2.1.3-alpha4
 l.bump(Kind.MINOR, "beta"); // → 2.2.0-beta1     (enter pre-release cycle)
 
 // Ordering
-VersionLabel.parse("1.0.0").compareTo(VersionLabel.parse("1.0.0-alpha"));   // > 0 (stable beats pre-release)
-```
-
-### `TypeRegistry`
-
-Read-only after startup.
-
-```java
-TypeRegistry reg = new TypeRegistry();                        // classpath types only
-TypeRegistry reg = new TypeRegistry(Path.of("/etc/types"));   // + user overlay
-
-List<TypeDef>  all      = reg.all();
-Optional<TypeDef> task  = reg.get("task");
-boolean exists          = reg.has("task");
-
-// Validate a typeFields map against a type's required fields.
-List<String> errs = reg.validate("task", Map.of("assignee", "alice"));
-// errs = ["required field missing: status"]
+VersionLabel.parse("1.0.0").compareTo(VersionLabel.parse("1.0.0-alpha"));   // > 0
 ```
 
 ### Storage interfaces
 
-All six are named consistently (`{Entity}Store`) and expose a small
-CRUD surface. `DocumentStore` is the biggest:
+`DocumentStore` is the biggest:
 
 ```java
 public interface DocumentStore {
-    void putVersion(Document doc);                                    // insert / replace by (canonical, label)
-    void setHead(String canonicalId, String versionId);               // atomic head swap
+    void putVersion(Document doc);
+    void setHead(String canonicalId, String versionId);
     Optional<Document> getHead(String canonicalId);
     Optional<Document> getVersion(String canonicalId, String label);
     Optional<Document> getVersionById(String versionId);
@@ -651,7 +844,7 @@ public interface DocumentStore {
     List<String>      listCanonicals();
     void tombstone(String canonicalId);
     boolean isTombstoned(String canonicalId);
-    void purge(String canonicalId);                                    // hard delete
+    void purge(String canonicalId);
 }
 ```
 
@@ -660,37 +853,27 @@ under [`store/`](../hitorro-nosqldms-core/src/main/java/com/hitorro/dms/store/).
 
 ### `BlobStore`
 
-Content-addressed. Same bytes ⇒ same hash ⇒ single stored blob.
-
 ```java
-Blob        b = blobStore.put(bytes, "image/jpeg");     // computes sha256
-String      h = b.sha256;                                // 64 hex chars
+Blob        b = blobStore.put(bytes, "image/jpeg");
+String      h = b.sha256;
 Optional<byte[]> read = blobStore.get(h);
 Optional<Blob>   meta = blobStore.stat(h);
 boolean          has  = blobStore.exists(h);
-blobStore.delete(h);                                     // GC after unref
+blobStore.delete(h);
 ```
 
 ### `IndexWriter` / `IndexSearcher`
 
-Sink + read APIs, kept separate for clean substitution. `LuceneIndex`
-implements both.
-
 ```java
-// Sink
-indexWriter.indexDocument(doc);      // idempotent — reindex safe
+indexWriter.indexDocument(doc);      // idempotent
 indexWriter.deleteDocument(versionId);
 indexWriter.commit();
 
-// Search
-List<SearchHit> hits = indexSearcher.search("chris AND status:open", 20);
+List<SearchHit> hits = indexSearcher.search("chris AND tf.status:open", 20);
 Map<String,Object> stored = indexSearcher.fetch(versionId);
 ```
 
-`SearchHit` is a record: `versionId`, `canonicalId`, `versionLabel`,
-`title`, `score`.
-
-## 11. REST API
+## 12. REST API
 
 Base URL: `http://<host>:<port>/`  (default `http://localhost:8090`).
 All request/response bodies are JSON unless noted.
@@ -705,7 +888,7 @@ All request/response bodies are JSON unless noted.
 | `DELETE` | `/api/documents/{id}` | Soft-delete (tombstone) | — | `204` |
 | `GET` | `/api/documents/{id}/versions` | Version history | — | `Document[]` |
 | `GET` | `/api/documents/{id}/versions/{label}` | One specific version | — | `Document` |
-| `POST` | `/api/documents/{id}/versions` | Check in a new version | `CheckInRequest` (without canonicalId) | `Document` |
+| `POST` | `/api/documents/{id}/versions` | Check in a new version | `CheckInRequest` | `Document` |
 
 **`CreateRequest` body:**
 
@@ -714,22 +897,19 @@ All request/response bodies are JSON unless noted.
   "title":       "Ship v0.2",
   "body":        "The 0.2 release notes.",
   "description": "One-line summary.",
-  "contentType": "task",
-  "typeName":    "task",
+  "contentType": "dms_task",
+  "typeName":    "dms_task",
   "typeFields":  { "assignee":"alice", "status":"todo", "priority":"high" },
   "createdBy":   "user:alice"
 }
 ```
 
-**`CheckInRequest` body:**
+**`CheckInRequest` body** (canonicalId comes from URL):
 
 ```json
 {
   "title":       "Ship v0.2 (fixed)",
-  "body":        "Updated notes.",
   "bumpKind":    "MINOR",
-  "qualifier":   null,
-  "typeName":    null,
   "typeFields":  { "status": "in-progress" },
   "modifiedBy":  "user:bob"
 }
@@ -739,8 +919,6 @@ All request/response bodies are JSON unless noted.
 from the body inherit from the previous head; `typeFields` merges
 per-key.
 
-**`Document` response** — see [section 4](#4-data-model).
-
 ### Renditions
 
 Copy-on-write per rendition. Same role ⇒ replaces; new role ⇒ appends.
@@ -748,8 +926,8 @@ Copy-on-write per rendition. Same role ⇒ replaces; new role ⇒ appends.
 | Method | Path | Purpose | Body |
 |---|---|---|---|
 | `GET` | `/api/documents/{id}/renditions` | List renditions on head | — |
-| `GET` | `/api/documents/{id}/versions/{versionId}/renditions` | List renditions on a specific version | — |
-| `GET` | `/api/documents/{id}/renditions/{role}` | Read bytes of rendition on head | — (returns raw bytes with the stored MIME) |
+| `GET` | `/api/documents/{id}/versions/{versionId}/renditions` | List on a specific version | — |
+| `GET` | `/api/documents/{id}/renditions/{role}` | Read bytes on head | — (returns raw bytes) |
 | `GET` | `/api/documents/{id}/versions/{versionId}/renditions/{role}` | Read bytes on a specific version | — |
 | `PUT` | `/api/documents/{id}/versions/{versionId}/renditions/{role}` | Attach or replace a rendition | raw bytes (`Content-Type` header sets the MIME) |
 | `DELETE` | `/api/documents/{id}/versions/{versionId}/renditions/{role}` | Remove rendition entry | — |
@@ -768,14 +946,6 @@ Copy-on-write per rendition. Same role ⇒ replaces; new role ⇒ appends.
 | `POST` | `/api/documents/{id}/references` | Add ref (from `id`) | `Reference` |
 | `DELETE` | `/api/documents/{id}/references/{to}/{kind}` | Remove one ref | — |
 
-**`Reference` body:**
-
-```json
-{ "toCanonical":"doc-abc", "toVersion":null, "kind":"cites", "aux":"sect 3.2" }
-```
-
-`fromCanonical` is filled in from the URL path.
-
 ### ACLs
 
 | Method | Path | Purpose | Body |
@@ -784,18 +954,9 @@ Copy-on-write per rendition. Same role ⇒ replaces; new role ⇒ appends.
 | `POST` | `/api/documents/{id}/acls` | Grant permission | `Grant` |
 | `DELETE` | `/api/documents/{id}/acls/{principal}/{permission}` | Revoke grant | — |
 
-**`Grant` body:**
-
-```json
-{ "principal":"user:alice", "permission":"read", "grant":true }
-```
-
-Permissions: `read` / `write` / `delete` / `share` / `admin` (any
-string is accepted — application defines semantics).
-
 ### Folders
 
-Folders are documents (`contentType:"folder"`) plus many-to-many
+Folders are documents (type `dms_folder`) plus many-to-many
 membership entries.
 
 | Method | Path | Purpose | Body |
@@ -805,8 +966,9 @@ membership entries.
 | `DELETE` | `/api/folders/{folder}/contents/{child}` | Unlink | — |
 | `GET` | `/api/folders/for-doc/{child}` | List every folder containing `child` | — |
 
-A doc can be in any number of folders. Link/unlink is a 2-KV write;
-doc body is never touched.
+A doc can be in any number of folders. Folders themselves are docs,
+so nesting = link folder-B into folder-A. Link/unlink is a 2-KV
+write; neither the folder body nor the child body is touched.
 
 ### Tags
 
@@ -819,38 +981,36 @@ doc body is never touched.
 
 ### Types
 
-Read-only.
+Read-only projection over the JVS type system.
 
 | Method | Path | Purpose |
 |---|---|---|
-| `GET` | `/api/types` | List registered TypeDefs |
-| `GET` | `/api/types/{name}` | Fetch one TypeDef |
+| `GET` | `/api/types` | List DMS type projections (4 today) |
+| `GET` | `/api/types/{name}` | Fetch one projected TypeDef |
 
 ### Search
 
-Lucene classic query grammar over the primary index.
+Lucene classic query grammar over the primary index. Default field
+is `_all` (catchall).
 
 | Method | Path | Purpose |
 |---|---|---|
 | `GET` | `/api/search?q=<query>&limit=<n>` | Full-text search |
-
-Response: `SearchHit[]` — each hit has `versionId`, `canonicalId`,
-`versionLabel`, `title`, `score`.
 
 **Query examples:**
 
 - `chris` — bare query. Matches title/body/description/typed fields via `_all`.
 - `title:chris` — exact-field.
 - `body:kubernetes AND tf.status:open` — typed-field filter.
-- `type_name:task AND tf.priority:high` — all high-priority tasks.
+- `type_name:dms_task AND tf.priority:high` — all high-priority tasks.
 - `is_head:true` — only current head versions.
 
 ### Curl examples
 
 ```bash
-# Create
+# Create a typed task
 curl -X POST http://localhost:8090/api/documents -H 'content-type: application/json' \
-  -d '{"title":"Ship v0.2","contentType":"task","typeName":"task",
+  -d '{"title":"Ship v0.2","contentType":"dms_task","typeName":"dms_task",
        "typeFields":{"assignee":"alice","status":"todo","priority":"high"},
        "createdBy":"cli"}'
 
@@ -863,6 +1023,15 @@ echo "PRIMARY BYTES" | curl -X PUT --data-binary @- \
 # Read rendition
 curl "http://localhost:8090/api/documents/$CID/renditions/primary"
 
+# Create a folder + link the task into it
+FOLDER=$(curl -sS -X POST http://localhost:8090/api/documents -H 'content-type: application/json' \
+     -d '{"title":"Engineering","contentType":"dms_folder","typeName":"dms_folder",
+          "typeFields":{"purpose":"Home for engineering docs","owner":"eng-lead"},
+          "createdBy":"cli"}' | python3 -c "import json,sys; print(json.load(sys.stdin)['canonicalId'])")
+curl -X POST "http://localhost:8090/api/folders/$FOLDER/contents" \
+     -H 'content-type: application/json' \
+     -d "{\"child\":\"$CID\",\"addedBy\":\"cli\"}"
+
 # Check-in a new version (metadata-only — content stays shared)
 curl -X POST "http://localhost:8090/api/documents/$CID/versions" \
      -H 'content-type: application/json' \
@@ -871,55 +1040,64 @@ curl -X POST "http://localhost:8090/api/documents/$CID/versions" \
 # List versions
 curl "http://localhost:8090/api/documents/$CID/versions"
 
+# List types (JVS projection)
+curl "http://localhost:8090/api/types"
+
 # Search
 curl 'http://localhost:8090/api/search?q=chris'
 ```
 
-## 12. Extending
+## 13. Extending
 
 ### Add a new document type
 
-Drop a JSON file into your types dir (default `${dms.home}/types/`):
+1. Write a JVS type JSON — must extend `dms_document` (or `sysobject`
+   directly if you don't need the DMS common fields).
 
-```json
-{
-  "name": "meeting-note",
-  "title": "Meeting note",
-  "description": "Notes from a meeting with attendees and action items.",
-  "fields": [
-    { "name": "attendees", "kind": "array<string>", "label": "Attendees" },
-    { "name": "date",      "kind": "date",          "label": "Date", "required": true },
-    { "name": "outcome",   "kind": "enum",          "label": "Outcome",
-      "choices": ["informational","decision","action-required"] },
-    { "name": "action_items", "kind": "text",       "label": "Action items", "rows": 6 }
-  ]
-}
-```
+    ```json
+    {
+      "name": "dms_meeting_note",
+      "description": "Notes from a meeting with attendees and action items.",
+      "super": "dms_document",
+      "fields": [
+        { "name": "attendees", "type": "core_string", "vector": true,
+          "groups": [{"name":"index","method":"identifier"}] },
+        { "name": "date",      "type": "core_date" },
+        { "name": "outcome",   "type": "core_string",
+          "description": "Enum-like: informational / decision / action-required.",
+          "groups": [{"name":"index","method":"identifier"}] },
+        { "name": "action_items", "type": "core_mls" }
+      ]
+    }
+    ```
 
-Restart the app; the type appears in the picker, and its fields
-render as a dynamic form on create + detail.
+2. Drop it into `${dms.home}/config/types/dms_meeting_note.json`.
+
+3. Add its name to `DMS_TYPE_NAMES` in `TypeRegistry` (if you want it
+   in the UI picker) OR just extend the registry to enumerate every
+   `dms_*` type on the filesystem (a small change).
+
+4. Restart. The type appears in the create dialog, its fields render
+   as a dynamic form, and `JsonTypeSystem.getType("dms_meeting_note")`
+   works for Java callers.
 
 ### Swap in a persistent storage impl
 
-Implement any of the six store interfaces (say `RocksDBDocumentStore`)
-and provide it as a Spring bean:
+Provide any of the six store interfaces as a Spring bean:
 
 ```java
 @Configuration
 public class MyStorageConfig {
-    @Bean DocumentStore documentStore() { return new RocksDBDocumentStore(myRocksPath); }
+    @Bean DocumentStore documentStore() { return new RocksDBDocumentStore(path); }
     @Bean BlobStore     blobStore()     { return new S3BlobStore(bucket); }
 }
 ```
-
-Spring's `@Bean` overrides win over the auto-configured in-memory
-defaults. `DmsContext` is rebuilt using your beans.
 
 Standalone (no Spring):
 
 ```java
 DmsContext ctx = DmsContext.builder()
-    .documentStore(new RocksDBDocumentStore(myRocksPath))
+    .documentStore(new RocksDBDocumentStore(path))
     .blobStore(new S3BlobStore(bucket))
     .withLucene(Path.of("/var/dms/lucene"))
     .build();
@@ -933,9 +1111,9 @@ Edit
 `richtext`) that renders your custom widget component. The value
 returned by `onChange` gets stored on `typeFields` verbatim.
 
-## 13. Design notes + tradeoffs
+## 14. Design notes + tradeoffs
 
-### What's deferred (per the design roadmap)
+### What's deferred
 
 - **Distribution.** Phase 1 is single-node. Partitioning by
   `canonical_id` and cross-partition back-refs is phase 3.
@@ -943,36 +1121,34 @@ returned by `onChange` gets stored on `typeFields` verbatim.
   grants are phase 4.
 - **MinIO / S3 blob backends.** Interface + KV impl only in phase 5.
 - **Blob GC pipeline.** Mark-and-sweep is designed but not implemented.
-- **Check-out leases.** Field on `Document` exists but no server-side
+- **Check-out leases.** Fields on `Document` exist but no server-side
   enforcement.
+- **JVS-native storage.** Documents are stored as flat POJOs — the
+  wire form doesn't yet match the JVS-serialized JsonNode with
+  `id.did` / `title.mls[en].text` composite paths. The type system
+  foundation is in place for this phase-2 refactor.
 
 ### Explicit tradeoffs
 
 - **No cross-document ACID.** Same-partition (same-doc) ops are atomic.
-  Cross-doc ops (references, folder membership when folder is on
-  another agent in a distributed deploy) are eventually consistent +
-  idempotent. If you need transactional integrity across multiple
-  docs, this is not the system.
+  Cross-doc ops (references, folder membership) are eventually
+  consistent + idempotent in a distributed deploy. If you need
+  transactional integrity across multiple docs, this is not the system.
 - **Read-optimized rendition manifest.** Attaching a derived rendition
-  requires rewriting the version's `v|` KV entry — not free. Chose
-  read-side simplicity over write efficiency here because reads
-  dominate for renditions (list them on every doc-detail view).
+  requires rewriting the version's `v|` KV entry. Chose read-side
+  simplicity over write efficiency because reads dominate for
+  renditions (list them on every doc-detail view).
 - **Lucene as sole search.** Range queries + full-text + faceting are
-  great; joins across indexes are limited. If you need
-  cross-document analytics, project into a warehouse.
+  great; joins across indexes are limited. If you need cross-document
+  analytics, project into a warehouse.
 - **In-memory phase-1 stores.** Data doesn't survive restart until a
-  persistent impl is wired in. Lucene index alone is persistent
-  (survives restart) but the authoritative store is not — meaning
-  right now, restart = data loss for docs. See [Extending](#12-extending)
-  for the RocksDB-swap pattern.
+  persistent impl is wired in. Lucene index alone is persistent.
 
 ## References
 
-- Design proposal (hitorro-jsontypesystem repo):
+- Design proposal (jsontypesystem repo):
   [distributed-dms.md](https://github.com/geekychris/hitorro-jsontypesystem/blob/main/docs/distributed-dms.md)
-- Framework-neutral core:
-  [`hitorro-nosqldms-core/`](../hitorro-nosqldms-core/)
-- Spring Boot runtime:
-  [`hitorro-nosqldms-spring-boot/`](../hitorro-nosqldms-spring-boot/)
-- React UI:
-  [`hitorro-nosqldms-web/`](../hitorro-nosqldms-web/)
+- Framework-neutral core: [`hitorro-nosqldms-core/`](../hitorro-nosqldms-core/)
+- Spring Boot runtime: [`hitorro-nosqldms-spring-boot/`](../hitorro-nosqldms-spring-boot/)
+- React UI: [`hitorro-nosqldms-web/`](../hitorro-nosqldms-web/)
+- JVS type system: [`hitorro-jsontypesystem/`](https://github.com/geekychris/hitorro-jsontypesystem/)

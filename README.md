@@ -1,38 +1,70 @@
 # hitorro-nosqldms
 
-A distributed, RDBMS-free document management system built on JVS types,
-KV storage, and Lucene indexing. The reference implementation for the
+A distributed, RDBMS-free document management system built on the
+**hitorro-jsontypesystem** (real JVS types — `dms_document` extends
+`sysobject`), KV storage, and Lucene indexing. Reference
+implementation for the
 [distributed-dms design proposal](https://github.com/geekychris/hitorro-jsontypesystem/blob/main/docs/distributed-dms.md).
 
-> **Full architecture + build + Java API + REST reference:**
-> [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+> **Full architecture + build + Java API + REST reference (with
+> Mermaid diagrams):** [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+
+## Type inheritance at a glance
+
+```mermaid
+graph BT
+  sysobject["sysobject<br/>id, times, title.mls, body.mls, description.mls"]
+  dmsdoc["dms_document<br/>version_*, content_refs, canonical_id, ..."]
+  wiki["dms_wiki_page<br/>summary, author_alias, status, tags"]
+  task["dms_task<br/>assignee, status, priority, ..."]
+  contact["dms_contact<br/>first_name, email, ..."]
+  folder["dms_folder<br/>purpose, owner"]
+  dmsdoc -->|super| sysobject
+  wiki -->|super| dmsdoc
+  task -->|super| dmsdoc
+  contact -->|super| dmsdoc
+  folder -->|super| dmsdoc
+```
+
+Every DMS type transitively extends `sysobject` — inheriting the JVS
+composite `id`, `times`, and multilingual `title`/`body`/`description`
+for free. `JsonTypeSystem.getMe().getType("dms_task").getSuper()` →
+`dms_document` → `sysobject`.
 
 ## What it does today (phase 1)
 
-- **Versioned documents.** Semver-inspired `MAJOR.MINOR.PATCH[-QUALIFIER[N]][+BUILD]`
-  labels; every part indexed separately for range queries. Every
-  check-in gets a monotonic `versionBuild` so `MAX(build)` always
-  identifies the newest version regardless of label.
+- **JVS-typed documents.** Types loaded via
+  `com.hitorro.jsontypesystem.JsonTypeSystem`. Bundled: 4 domain
+  types (`dms_wiki_page`, `dms_task`, `dms_contact`, `dms_folder`)
+  all extending `dms_document` → `sysobject`. Drop your own
+  `dms_*.json` into `${dms.home}/config/types/` and it's picked up on
+  next boot.
+- **Versioned documents.** Semver-inspired
+  `MAJOR.MINOR.PATCH[-QUALIFIER[N]][+BUILD]` labels; every part
+  indexed separately for range queries. Every check-in gets a
+  monotonic `versionBuild` so `MAX(build)` always identifies the
+  newest version regardless of label.
 - **Multi-rendition content with copy-on-write per rendition.** A
   document can carry any number of named renditions (primary,
-  thumbnail, extract, transcript, …). Bytes are content-addressed by
-  sha256 — check-in shallow-copies the manifest, so a metadata-only
-  version bump copies **zero bytes** even on a 500 MB doc. Replacing
-  one rendition splits only that role; every other rendition still
-  shares its blob with the previous version.
+  thumbnail, extract, transcript, …). Bytes content-addressed by
+  sha256 — metadata-only check-in of a 500 MB doc copies **zero
+  bytes**. Replacing one rendition splits only that role.
 - **First-class relationships kept off the doc body.** References,
   folder memberships, ACL grants, and tags each live in their own
   sibling storage keyspace. Adding a citation, granting an ACL, or
-  linking to a folder never rewrites the document — see the
-  [Minimal-update principle](https://github.com/geekychris/hitorro-jsontypesystem/blob/main/docs/distributed-dms.md#minimal-update-principle).
-- **Many-to-many folders.** A doc can be linked into any number of
-  folders. Folders themselves are documents (`contentType: "folder"`).
-- **Lucene index kept in sync via mesh pipeline-style write path.**
-  Idempotent updates by `versionId`. Rebuild the entire index from
-  the KV store at any time.
-- **REST API + React UI.** Full HTTP surface for docs / versions /
-  renditions / folders / references / ACLs / search. React 18 UI
-  bundled into the Spring Boot jar.
+  linking to a folder never rewrites the document.
+- **Many-to-many nested folders.** A doc can be linked into any
+  number of folders. Folders are themselves documents (type
+  `dms_folder`) so folder-in-folder works out of the box. UI lets
+  you drill into sub-folders and pick docs to link from a modal.
+- **Lucene search with catch-all default field.** Bare queries like
+  `chris` match title/body/description/typed fields uniformly via
+  the `_all` field. Explicit-field queries (`tf.status:open`,
+  `type_name:dms_task`, `version_major:2`) also work.
+- **REST API + React UI.** Full HTTP surface + type-differentiated
+  UI (colored badges per type, per-type table columns, dynamic form
+  driven by the JVS TypeDef). React 18 UI bundled into the Spring
+  Boot jar.
 
 ## What's deferred (per design roadmap)
 
@@ -43,10 +75,21 @@ interfaces to persist.
 
 ## Module layout
 
+```mermaid
+graph LR
+  core[hitorro-nosqldms-core<br/>storage + service + Lucene]
+  spring[hitorro-nosqldms-spring-boot<br/>autoconfig + REST]
+  web[hitorro-nosqldms-web<br/>React UI]
+  jvs[hitorro-jsontypesystem<br/>Type + JVS + core types]
+  spring --> core
+  core --> jvs
+  web -.->|vite build outputs to<br/>spring/static/| spring
 ```
-hitorro-dms/
-├── hitorro-nosql-dms-core/    — Spring-neutral NoSQL core (types, stores, service, index)
-├── hitorro-nosqldms-spring-boot/   — Spring Boot 3 runtime: autoconfig + REST + hosts UI
+
+```
+hitorro-nosqldms/
+├── hitorro-nosqldms-core/         — Spring-neutral NoSQL core (types, stores, service, index)
+├── hitorro-nosqldms-spring-boot/  — Spring Boot 3 runtime: autoconfig + REST + hosts UI
 └── hitorro-nosqldms-web/           — React 18 + Vite + TypeScript UI
 ```
 
