@@ -4,6 +4,9 @@ A distributed, RDBMS-free document management system built on JVS types,
 KV storage, and Lucene indexing. The reference implementation for the
 [distributed-dms design proposal](https://github.com/geekychris/hitorro-jsontypesystem/blob/main/docs/distributed-dms.md).
 
+> **Full architecture + build + Java API + REST reference:**
+> [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+
 ## What it does today (phase 1)
 
 - **Versioned documents.** Semver-inspired `MAJOR.MINOR.PATCH[-QUALIFIER[N]][+BUILD]`
