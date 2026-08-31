@@ -102,6 +102,32 @@ export default function DocumentDetailPage() {
     load();
   };
 
+  // ---- folder linking ----
+  const [folderPickerOpen, setFolderPickerOpen] = useState(false);
+  const [availableFolders, setAvailableFolders] = useState<Document[]>([]);
+
+  const openFolderPicker = async () => {
+    const all = await dms.listAllFolders();
+    const already = new Set(folders.map(f => f.folderCanonical));
+    setAvailableFolders(all
+        .filter(f => f.canonicalId !== id)          // no self-link
+        .filter(f => !already.has(f.canonicalId))); // no dup
+    setFolderPickerOpen(true);
+  };
+
+  const addToFolder = async (folderId: string) => {
+    if (!id) return;
+    await dms.linkFolder(folderId, id);
+    setFolderPickerOpen(false);
+    load();
+  };
+
+  const removeFromFolder = async (folderId: string) => {
+    if (!id) return;
+    await dms.unlinkFolder(folderId, id);
+    load();
+  };
+
   if (!head) return <div className="meta">loading…</div>;
 
   return (
@@ -305,14 +331,68 @@ export default function DocumentDetailPage() {
       </div>
 
       <div className="card">
-        <h3>Folders containing this doc ({folders.length})</h3>
-        {folders.length === 0 && <p className="meta">Not in any folder.</p>}
-        <ul>
-          {folders.map(f => <li key={f.folderCanonical}>
-            <Link to={`/folders/${f.folderCanonical}`}>{f.folderCanonical}</Link>
-          </li>)}
-        </ul>
+        <div className="row" style={{ marginBottom: 8 }}>
+          <h3 style={{ margin: 0, flex: 1 }}>Folders containing this doc ({folders.length})</h3>
+          <button onClick={openFolderPicker}>+ Add to folder</button>
+        </div>
+        {folders.length === 0 && <p className="meta">Not in any folder. Click <b>+ Add to folder</b> to link this doc into one.</p>}
+        {folders.length > 0 && (
+          <table>
+            <thead><tr><th>Folder</th><th>Added</th><th></th></tr></thead>
+            <tbody>
+              {folders.map(f => (
+                <tr key={f.folderCanonical}>
+                  <td>📁 <Link to={`/folders/${f.folderCanonical}`}>{f.folderCanonical}</Link></td>
+                  <td className="meta">{f.addedAt?.slice(0, 19)}</td>
+                  <td>
+                    <button className="secondary"
+                            style={{ padding: '2px 8px', fontSize: '0.72rem' }}
+                            onClick={() => removeFromFolder(f.folderCanonical)}>
+                      Unlink
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
+
+      {folderPickerOpen && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 1000,
+        }}>
+          <div style={{
+            background: '#fff', borderRadius: 6, padding: 20, minWidth: 500, maxWidth: 720,
+            maxHeight: '80vh', overflow: 'auto',
+          }}>
+            <div className="row" style={{ marginBottom: 12 }}>
+              <h3 style={{ margin: 0, flex: 1 }}>Add this doc to a folder</h3>
+              <button className="secondary" onClick={() => setFolderPickerOpen(false)}>Cancel</button>
+            </div>
+            {availableFolders.length === 0 && (
+              <p className="meta">
+                No folders available. Create one on the <Link to="/folders">Folders</Link> tab first.
+              </p>
+            )}
+            <table>
+              <thead><tr><th>Folder</th><th></th></tr></thead>
+              <tbody>
+                {availableFolders.map(f => (
+                  <tr key={f.canonicalId}>
+                    <td>📁 <b>{f.title ?? '(untitled)'}</b>
+                        <span className="meta"> — {(f.typeFields?.purpose as string) ?? ''}</span>
+                    </td>
+                    <td><button onClick={() => addToFolder(f.canonicalId)}>Add</button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       <div className="card">
         <h3>References — outbound ({refs.length})</h3>

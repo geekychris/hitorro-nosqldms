@@ -190,6 +190,16 @@ export const dms = {
     fetch(`/api/folders/${folder}/contents/${child}`, { method: 'DELETE' })
       .then(() => undefined),
 
+  /** Convenience: return all documents whose typeName === 'dms_folder', hydrated. */
+  listAllFolders: async (): Promise<Document[]> => {
+    const ids = await fetch('/api/documents').then(json);
+    const heads = await Promise.all((ids as string[]).map(async (id: string) => {
+      try { return await fetch(`/api/documents/${id}`).then(json) as Document; }
+      catch { return null; }
+    }));
+    return heads.filter((d): d is Document => !!d && (d.typeName === 'dms_folder' || d.contentType === 'dms_folder'));
+  },
+
   search: (q: string, limit = 20): Promise<SearchHit[]> =>
     fetch(`/api/search?q=${encodeURIComponent(q)}&limit=${limit}`).then(json),
 
