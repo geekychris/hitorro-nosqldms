@@ -23,6 +23,20 @@
     </description>
 
     <dependencies>
+        <!-- JVS type system: Type, JsonTypeSystem, JVS, Propaccess -->
+        <dependency>
+            <groupId>com.hitorro</groupId>
+            <artifactId>hitorro-jsontypesystem</artifactId>
+            <version>3.0.1</version>
+            <exclusions>
+                <!-- Skip heavy NLP + Groovy — we're using JVS as a plain type system, not for enrichment. -->
+                <exclusion><groupId>org.apache.opennlp</groupId><artifactId>opennlp-tools</artifactId></exclusion>
+                <exclusion><groupId>org.apache.opennlp</groupId><artifactId>opennlp-dl</artifactId></exclusion>
+                <exclusion><groupId>ai.djl.huggingface</groupId><artifactId>tokenizers</artifactId></exclusion>
+                <exclusion><groupId>net.sf.extjwnl</groupId><artifactId>extjwnl</artifactId></exclusion>
+                <exclusion><groupId>net.sf.extjwnl</groupId><artifactId>extjwnl-data-wn31</artifactId></exclusion>
+            </exclusions>
+        </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>

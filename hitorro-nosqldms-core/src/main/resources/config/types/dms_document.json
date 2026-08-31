@@ -1,0 +1,47 @@
+{
+  "name": "dms_document",
+  "description": "Base DMS document type — extends sysobject with versioning + rendition manifest fields shared by every managed document.",
+  "super": "sysobject",
+  "fields": [
+    { "name": "canonical_id",       "type": "core_string",
+      "description": "Stable identity across every version. Denorm of id.did for query efficiency.",
+      "groups": [{ "name": "index", "method": "identifier" }] },
+
+    { "name": "version_id",         "type": "core_string",
+      "description": "Unique per version.",
+      "groups": [{ "name": "index", "method": "identifier" }] },
+    { "name": "version_label",      "type": "core_string",
+      "groups": [{ "name": "index", "method": "identifier" }] },
+    { "name": "version_major",      "type": "core_long",
+      "groups": [{ "name": "index", "method": "long" }] },
+    { "name": "version_minor",      "type": "core_long",
+      "groups": [{ "name": "index", "method": "long" }] },
+    { "name": "version_patch",      "type": "core_long",
+      "groups": [{ "name": "index", "method": "long" }] },
+    { "name": "version_qualifier",  "type": "core_string",
+      "groups": [{ "name": "index", "method": "identifier" }] },
+    { "name": "version_qual_number","type": "core_long",
+      "groups": [{ "name": "index", "method": "long" }] },
+    { "name": "version_build",      "type": "core_long",
+      "groups": [{ "name": "index", "method": "long" }] },
+    { "name": "version_kind",       "type": "core_string",
+      "groups": [{ "name": "index", "method": "identifier" }] },
+    { "name": "parent_version",     "type": "core_string" },
+    { "name": "is_head",            "type": "core_boolean",
+      "groups": [{ "name": "index", "method": "identifier" }] },
+    { "name": "is_stable",          "type": "core_boolean",
+      "groups": [{ "name": "index", "method": "identifier" }] },
+
+    { "name": "content_type",       "type": "core_string",
+      "groups": [{ "name": "index", "method": "identifier" }] },
+    { "name": "created_by",         "type": "core_string",
+      "groups": [{ "name": "index", "method": "identifier" }] },
+    { "name": "modified_by",        "type": "core_string",
+      "groups": [{ "name": "index", "method": "identifier" }] },
+
+    { "name": "content_refs",       "type": "dms_content_ref", "vector": true },
+
+    { "name": "tombstoned",         "type": "core_boolean",
+      "groups": [{ "name": "index", "method": "identifier" }] }
+  ]
+}

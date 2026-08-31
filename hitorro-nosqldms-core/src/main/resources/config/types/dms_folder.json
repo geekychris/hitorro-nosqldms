@@ -1,0 +1,10 @@
+{
+  "name": "dms_folder",
+  "description": "A named container for other documents. Also a document itself.",
+  "super": "dms_document",
+  "fields": [
+    { "name": "purpose", "type": "core_mls" },
+    { "name": "owner",   "type": "core_string",
+      "groups": [{ "name": "index", "method": "identifier" }] }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "name": "dms_content_ref",
+  "description": "One entry in a document's rendition manifest — points at a content blob by sha256.",
+  "super": null,
+  "fields": [
+    { "name": "role",              "type": "core_string",
+      "groups": [{ "name": "index", "method": "identifier" }] },
+    { "name": "mime",              "type": "core_string",
+      "groups": [{ "name": "index", "method": "identifier" }] },
+    { "name": "size_bytes",        "type": "core_long" },
+    { "name": "sha256",            "type": "core_string",
+      "groups": [{ "name": "index", "method": "identifier" }] },
+    { "name": "url",               "type": "core_string" },
+    { "name": "inline",            "type": "core_string" },
+    { "name": "generated_by",      "type": "core_string" },
+    { "name": "derived_from_role", "type": "core_string" },
+    { "name": "source_version_id", "type": "core_string" },
+    { "name": "attached_at",       "type": "core_date" }
+  ]
+}

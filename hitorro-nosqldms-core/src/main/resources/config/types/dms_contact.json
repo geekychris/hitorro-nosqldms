@@ -1,0 +1,16 @@
+{
+  "name": "dms_contact",
+  "description": "Person or organization contact — extends dms_document.",
+  "super": "dms_document",
+  "fields": [
+    { "name": "first_name",   "type": "core_string" },
+    { "name": "last_name",    "type": "core_string" },
+    { "name": "organization", "type": "core_string",
+      "groups": [{ "name": "index", "method": "identifier" }] },
+    { "name": "email",        "type": "core_string",
+      "groups": [{ "name": "index", "method": "identifier" }] },
+    { "name": "phone",        "type": "core_string" },
+    { "name": "website",      "type": "core_url" },
+    { "name": "notes",        "type": "core_mls" }
+  ]
+}

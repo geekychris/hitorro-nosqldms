@@ -1,0 +1,15 @@
+{
+  "name": "dms_wiki_page",
+  "description": "Long-form text page (extends dms_document → sysobject).",
+  "super": "dms_document",
+  "fields": [
+    { "name": "summary",      "type": "core_mls" },
+    { "name": "author_alias", "type": "core_string",
+      "groups": [{ "name": "index", "method": "identifier" }] },
+    { "name": "status",       "type": "core_string",
+      "description": "Enum-like: draft / review / published / archived.",
+      "groups": [{ "name": "index", "method": "identifier" }] },
+    { "name": "tags",         "type": "core_string", "vector": true,
+      "groups": [{ "name": "index", "method": "identifier" }] }
+  ]
+}

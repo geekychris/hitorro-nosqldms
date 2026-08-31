@@ -1,0 +1,19 @@
+{
+  "name": "dms_task",
+  "description": "A single unit of work — extends dms_document.",
+  "super": "dms_document",
+  "fields": [
+    { "name": "assignee",   "type": "core_string",
+      "groups": [{ "name": "index", "method": "identifier" }] },
+    { "name": "status",     "type": "core_string",
+      "description": "Enum-like: todo / in-progress / blocked / done.",
+      "groups": [{ "name": "index", "method": "identifier" }] },
+    { "name": "priority",   "type": "core_string",
+      "description": "Enum-like: low / medium / high / urgent.",
+      "groups": [{ "name": "index", "method": "identifier" }] },
+    { "name": "due_date",   "type": "core_date" },
+    { "name": "estimate_h", "type": "core_double" },
+    { "name": "labels",     "type": "core_string", "vector": true,
+      "groups": [{ "name": "index", "method": "identifier" }] }
+  ]
+}

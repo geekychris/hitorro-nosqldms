@@ -46,10 +46,14 @@ public class DmsAutoConfiguration implements DisposableBean {
                     : Path.of(props.getHome(), "lucene");
             b.withLucene(luceneDir);
         }
-        Path typesDir = props.getTypesDir() != null
+        // JVS home = dms.home by default. Bundled DMS types get extracted to
+        // ${home}/config/types/ so JsonTypeSystem (which reads HT_BIN/config/types)
+        // finds them. Operators can drop additional JVS type JSONs into that
+        // same dir and they'll be picked up on next boot.
+        Path jvsHome = props.getTypesDir() != null
                 ? Path.of(props.getTypesDir())
-                : Path.of(props.getHome(), "types");
-        b.withTypesDir(typesDir);
+                : Path.of(props.getHome());
+        b.withTypesDir(jvsHome);
         this.ctx = b.build();
         return ctx;
     }

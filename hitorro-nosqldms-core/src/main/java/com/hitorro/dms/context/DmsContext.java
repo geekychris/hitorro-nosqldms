@@ -9,6 +9,7 @@ import com.hitorro.dms.index.IndexSearcher;
 import com.hitorro.dms.index.IndexWriter;
 import com.hitorro.dms.index.lucene.LuceneIndex;
 import com.hitorro.dms.service.DocumentService;
+import com.hitorro.dms.service.TypeBootstrap;
 import com.hitorro.dms.service.TypeRegistry;
 import com.hitorro.dms.store.AclStore;
 import com.hitorro.dms.store.DocumentStore;
@@ -22,6 +23,7 @@ import com.hitorro.dms.store.mem.InMemoryReferenceStore;
 import com.hitorro.dms.store.mem.InMemoryTagStore;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
@@ -57,6 +59,16 @@ public final class DmsContext implements AutoCloseable {
     private final Map<Class<?>, Object> extras;
 
     private DmsContext(Builder b) throws IOException {
+        // Extract bundled JVS type JSONs onto disk and point HT_BIN there
+        // BEFORE anyone asks JsonTypeSystem for a Type — the type system
+        // is a static singleton and lazy-loads from that dir. Type home
+        // defaults to a temp path when no persistence root is configured
+        // (in-memory tests, embedded use).
+        Path typeHome = b.typesDir != null
+                ? b.typesDir
+                : Files.createTempDirectory("dms-types-");
+        TypeBootstrap.bootstrap(typeHome);
+
         this.documentStore  = b.documentStore  != null ? b.documentStore  : new InMemoryDocumentStore();
         this.referenceStore = b.referenceStore != null ? b.referenceStore : new InMemoryReferenceStore();
         this.folderStore    = b.folderStore    != null ? b.folderStore    : new InMemoryFolderStore();
@@ -74,7 +86,7 @@ public final class DmsContext implements AutoCloseable {
         }
 
         this.documentService = new DocumentService(documentStore, blobStore, indexWriter);
-        this.typeRegistry = b.typesDir != null ? new TypeRegistry(b.typesDir) : new TypeRegistry();
+        this.typeRegistry = new TypeRegistry();
         this.extras = new HashMap<>(b.extras);
     }
 

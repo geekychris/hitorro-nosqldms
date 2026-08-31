@@ -4,10 +4,10 @@ import { dms, Document, Grant, Reference, FolderMembership, TypeDef } from '../a
 import TypedFieldsForm from '../components/TypedFieldsForm';
 
 const TYPE_STYLE: Record<string, { icon: string; color: string; bg: string; border: string }> = {
-  'wiki-page': { icon: '📄', color: '#1970a8', bg: '#e8f4ff', border: '#b7d7ee' },
-  'task':      { icon: '✓',  color: '#a86c19', bg: '#fff4e0', border: '#ecd6ac' },
-  'contact':   { icon: '👤', color: '#147a3c', bg: '#e6f7ea', border: '#b6dcb9' },
-  'folder':    { icon: '📁', color: '#7a1477', bg: '#f4e6f5', border: '#dcbadf' },
+  'dms_wiki_page': { icon: '📄', color: '#1970a8', bg: '#e8f4ff', border: '#b7d7ee' },
+  'dms_task':      { icon: '✓',  color: '#a86c19', bg: '#fff4e0', border: '#ecd6ac' },
+  'dms_contact':   { icon: '👤', color: '#147a3c', bg: '#e6f7ea', border: '#b6dcb9' },
+  'dms_folder':    { icon: '📁', color: '#7a1477', bg: '#f4e6f5', border: '#dcbadf' },
 };
 const DEFAULT_STYLE = { icon: '📃', color: '#666', bg: '#f5f5f5', border: '#ddd' };
 
