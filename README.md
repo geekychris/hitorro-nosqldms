@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo.png" alt="Hitorro Nosqldms logo" width="180">
+</p>
+
 # hitorro-nosqldms
 
 A distributed, RDBMS-free document management system built on the
