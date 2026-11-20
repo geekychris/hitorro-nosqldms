@@ -27,7 +27,7 @@
         <dependency>
             <groupId>com.hitorro</groupId>
             <artifactId>hitorro-jsontypesystem</artifactId>
-            <version>3.0.1</version>
+            <version>3.0.2</version>
             <exclusions>
                 <!-- Skip heavy NLP + Groovy — we're using JVS as a plain type system, not for enrichment. -->
                 <exclusion><groupId>org.apache.opennlp</groupId><artifactId>opennlp-tools</artifactId></exclusion>
