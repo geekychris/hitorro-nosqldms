@@ -4,6 +4,10 @@ server:
 spring:
   application:
     name: hitorro-dms
+  http:
+    converters:
+      # Boot 4 defaults to Jackson 3; keep Jackson 2 (com.fasterxml.jackson) for HTTP.
+      preferred-json-mapper: jackson2
   servlet:
     multipart:
       max-file-size: 128MB

@@ -13,7 +13,7 @@
     <artifactId>hitorro-nosqldms-spring-boot</artifactId>
     <name>Hitorro NoSQL DMS (Spring Boot runtime)</name>
     <description>
-        Spring Boot 3 runtime — wires the framework-neutral core into an
+        Spring Boot 4 runtime — wires the framework-neutral core into an
         HTTP service. REST endpoints for documents, versions, renditions,
         folders, references, ACLs, tags, search. Serves the React UI
         bundled from hitorro-nosqldms-web.
@@ -24,11 +24,30 @@
             <groupId>com.hitorro</groupId>
             <artifactId>hitorro-nosqldms-core</artifactId>
             <version>0.1.0</version>
+            <exclusions>
+                <!-- HiTorro libraries bring reload4j; Boot uses Logback. -->
+                <exclusion><groupId>org.slf4j</groupId><artifactId>slf4j-reload4j</artifactId></exclusion>
+                <exclusion><groupId>ch.qos.reload4j</groupId><artifactId>reload4j</artifactId></exclusion>
+            </exclusions>
+        </dependency>
+        <!-- hitorro-core's com.hitorro.util.log.Logger calls the log4j 1 API;
+             route it to SLF4J now that reload4j is excluded. -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>log4j-over-slf4j</artifactId>
         </dependency>
 
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
+            <artifactId>spring-boot-starter-webmvc</artifactId>
+            <version>${spring-boot.version}</version>
+        </dependency>
+        <!-- Boot 4 defaults to Jackson 3 (tools.jackson); the DMS and HiTorro
+             libraries use Jackson 2. spring.http.converters.preferred-json-mapper
+             =jackson2 (application.yml) selects this module's converter. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-jackson2</artifactId>
             <version>${spring-boot.version}</version>
         </dependency>
         <dependency>
@@ -40,6 +59,26 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <version>${spring-boot.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <!-- Boot 4 split test support: MockMvc and TestRestTemplate -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webmvc-test</artifactId>
+            <version>${spring-boot.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-resttestclient</artifactId>
+            <version>${spring-boot.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <!-- TestRestTemplate is built from RestTemplateBuilder (spring-boot-restclient) -->
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-restclient</artifactId>
             <version>${spring-boot.version}</version>
             <scope>test</scope>
         </dependency>
