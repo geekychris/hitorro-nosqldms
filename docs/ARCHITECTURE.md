@@ -88,7 +88,7 @@ graph LR
 - `com.hitorro.dms.context.*` — `DmsContext` (framework-neutral service registry)
 - `src/main/resources/config/types/*.json` — 6 DMS-owned JVS type JSONs
 
-**`hitorro-nosqldms-spring-boot`** — Spring Boot 3 runtime
+**`hitorro-nosqldms-spring-boot`** — Spring Boot 4 runtime
 - `DmsApplication` (`@SpringBootApplication` entry point)
 - `config/DmsAutoConfiguration` + `DmsProperties`
 - `web/*Controller` — 8 REST controllers (documents, versions, renditions, folders, references, ACLs, tags, types, search)

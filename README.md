@@ -93,7 +93,7 @@ graph LR
 ```
 hitorro-nosqldms/
 ├── hitorro-nosqldms-core/         — Spring-neutral NoSQL core (types, stores, service, index)
-├── hitorro-nosqldms-spring-boot/  — Spring Boot 3 runtime: autoconfig + REST + hosts UI
+├── hitorro-nosqldms-spring-boot/  — Spring Boot 4 runtime: autoconfig + REST + hosts UI
 └── hitorro-nosqldms-web/           — React 18 + Vite + TypeScript UI
 ```
 
