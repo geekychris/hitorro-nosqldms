@@ -390,7 +390,7 @@ vendored into the other.
 
 | Type | Jar | Purpose |
 |---|---|---|
-| `sysobject`, `id`, `mls`, `mlselem`, `dates`, `date`, `string`, `long`, `boolean`, `url` | `hitorro-jsontypesystem-3.0.1.jar` | Core JVS types — every JVS user needs these |
+| `sysobject`, `id`, `mls`, `mlselem`, `dates`, `date`, `string`, `long`, `boolean`, `url` | `hitorro-jsontypesystem-3.0.2.jar` | Core JVS types — every JVS user needs these |
 | `dms_content_ref`, `dms_document`, `dms_wiki_page`, `dms_task`, `dms_contact`, `dms_folder` | `hitorro-nosqldms-core-0.1.0.jar` | DMS-specific types |
 
 ### Bootstrap sequence
