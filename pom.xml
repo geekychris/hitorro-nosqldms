@@ -20,7 +20,7 @@
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <jackson.version>2.21.8</jackson.version>
+        <jackson.version>3.1.8</jackson.version>
         <junit.version>6.0.3</junit.version>
         <assertj.version>3.27.7</assertj.version>
         <spring-boot.version>4.1.3</spring-boot.version>
@@ -90,10 +90,11 @@
                 <artifactId>jline-terminal-jni</artifactId>
                 <version>3.30.17</version>
             </dependency>
+            <!-- Jackson 3: the version Spring Boot 4.1.3 manages -->
             <dependency>
-                <groupId>com.fasterxml.jackson</groupId>
+                <groupId>tools.jackson</groupId>
                 <artifactId>jackson-bom</artifactId>
-                <version>2.21.8</version>
+                <version>${jackson.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -425,16 +426,6 @@
                 <groupId>org.apache.tomcat.embed</groupId>
                 <artifactId>tomcat-embed-websocket</artifactId>
                 <version>11.0.27</version>
-            </dependency>
-            <dependency>
-                <groupId>com.fasterxml.jackson.core</groupId>
-                <artifactId>jackson-databind</artifactId>
-                <version>${jackson.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.fasterxml.jackson.datatype</groupId>
-                <artifactId>jackson-datatype-jsr310</artifactId>
-                <version>${jackson.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.junit.jupiter</groupId>

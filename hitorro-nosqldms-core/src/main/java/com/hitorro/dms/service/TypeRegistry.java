@@ -3,7 +3,7 @@
  */
 package com.hitorro.dms.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import com.hitorro.dms.model.TypeDef;
 import com.hitorro.jsontypesystem.Field;
 import com.hitorro.jsontypesystem.JsonTypeSystem;
@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import com.hitorro.util.json.JsonValues;
 
 /**
  * Facade over hitorro-jsontypesystem's {@link JsonTypeSystem} —
@@ -129,7 +130,7 @@ public final class TypeRegistry {
         td.name = t.getName();
         JsonNode meta = t.getMetaNode();
         if (meta != null) {
-            if (meta.has("description")) td.description = meta.path("description").asText();
+            if (meta.has("description")) td.description = JsonValues.asText(meta.path("description"));
             td.title = titleOf(t.getName());
         }
 
@@ -137,7 +138,7 @@ public final class TypeRegistry {
         JsonNode fieldsNode = meta == null ? null : meta.get("fields");
         if (fieldsNode != null && fieldsNode.isArray()) {
             for (JsonNode fn : fieldsNode) {
-                String fname = fn.path("name").asText(null);
+                String fname = JsonValues.asText(fn.path("name"), null);
                 if (fname == null || STRUCTURAL_FIELDS.contains(fname)) continue;
                 td.fields.add(projectField(t, fname, fn));
             }
@@ -149,10 +150,10 @@ public final class TypeRegistry {
         TypeDef.FieldDef fd = new TypeDef.FieldDef();
         fd.name  = name;
         fd.label = labelOf(name);
-        String jvsType = fn.path("type").asText();
-        boolean vector = fn.path("vector").asBoolean(false);
+        String jvsType = JsonValues.asText(fn.path("type"));
+        boolean vector = JsonValues.asBoolean(fn.path("vector"), false);
         fd.kind = kindFor(jvsType, vector);
-        if (fn.has("description")) fd.help = fn.path("description").asText();
+        if (fn.has("description")) fd.help = JsonValues.asText(fn.path("description"));
         // A field with description containing "Enum-like: a / b / c" gets its
         // choices parsed out — cheap convention that keeps the JSON simple.
         if ("core_string".equals(jvsType) && fd.help != null && fd.help.contains("Enum-like:")) {
