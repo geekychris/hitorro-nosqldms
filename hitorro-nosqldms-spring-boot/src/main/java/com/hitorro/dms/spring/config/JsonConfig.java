@@ -2,12 +2,18 @@ package com.hitorro.dms.spring.config;
 
 import com.hitorro.util.json.Jackson2JdkModule;
 import com.hitorro.util.json.JsonMappers;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import org.springframework.boot.actuate.endpoint.jackson.EndpointJsonMapper;
 import org.springframework.boot.jackson.autoconfigure.JsonFactoryBuilderCustomizer;
 import org.springframework.boot.jackson.autoconfigure.JsonMapperBuilderCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.MapperFeature;
+import tools.jackson.databind.cfg.DateTimeFeature;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Keeps the REST/JSON format the app had on Jackson 2.
@@ -41,5 +47,24 @@ public class JsonConfig {
     @Bean
     JsonMapperBuilderCustomizer jackson2JdkTypes() {
         return builder -> builder.addModule(new Jackson2JdkModule());
+    }
+
+    /**
+     * Actuator JSON. Boot 4's isolated endpoint mapper is a plain Jackson 3 mapper (alphabetical properties);
+     * with {@code management.endpoints.jackson.isolated-json-mapper=false} this bean takes its place. It is
+     * what Boot's former isolated Jackson 2 endpoint mapper was: Jackson 2 defaults and limits, ISO dates
+     * and durations, lenient reads, no default view inclusion, nulls left out.
+     */
+    @Bean
+    EndpointJsonMapper hitorroEndpointJsonMapper() {
+        JsonMapper mapper = JsonMappers.builder()
+                .disable(DateTimeFeature.WRITE_DATES_AS_TIMESTAMPS)
+                .disable(DateTimeFeature.WRITE_DURATIONS_AS_TIMESTAMPS)
+                .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+                .disable(MapperFeature.DEFAULT_VIEW_INCLUSION)
+                .changeDefaultPropertyInclusion(i -> i.withValueInclusion(JsonInclude.Include.NON_NULL)
+                        .withContentInclusion(JsonInclude.Include.NON_NULL))
+                .build();
+        return () -> mapper;
     }
 }

@@ -84,7 +84,8 @@ class GoldenRestTest {
                 // Instant.now() values: ISO strings in REST, decimal epoch seconds in the Lucene _source
                 .normalizer(s -> s.replaceAll("(\"[A-Za-z]*At\"\\s*:\\s*)\"[0-9][^\"]*\"", "$1\"~\""))
                 .normalizer(s -> s.replaceAll("(\"[A-Za-z]*At\"\\s*:\\s*)[0-9][0-9.eE+-]*", "$1~"))
-                .replace(home.toString(), "<HOME>");
+                .replace(home.toString(), "<HOME>")
+                .normalizer(s -> s.replaceAll("(\"statistic\":\"[A-Z_]+\",\"value\":)[0-9.Ee+-]+", "$10"));
 
         types();
         String a = documents();
@@ -103,6 +104,10 @@ class GoldenRestTest {
         g.rest(mvc, "actuator health", get("/actuator/health"));
         g.rest(mvc, "actuator info", get("/actuator/info"));
         g.rest(mvc, "actuator metric jvm.threads.daemon", get("/actuator/metrics/jvm.threads.daemon").param("tag", "nope:x"));
+        g.restUnordered(mvc, "actuator links", get("/actuator"));
+        g.rest(mvc, "actuator health liveness", get("/actuator/health/liveness"));
+        g.rest(mvc, "actuator metric jvm.threads.daemon value", get("/actuator/metrics/jvm.threads.daemon"));
+        g.rest(mvc, "actuator metric missing", get("/actuator/metrics/nope.nope"));
         lucene();
         ConverterProbe.run(ConverterProbe.jsonConverter(adapter), g);
 

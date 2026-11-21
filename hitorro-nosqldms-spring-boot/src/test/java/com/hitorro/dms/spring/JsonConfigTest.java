@@ -71,4 +71,16 @@ class JsonConfigTest {
         assertThat(r.getMaxTokenCount()).isEqualTo(wantR.getMaxTokenCount());
         assertThat(w.getMaxNestingDepth()).isEqualTo(JsonMappers.JACKSON2_WRITE_CONSTRAINTS.getMaxNestingDepth()).isEqualTo(1000);
     }
+
+    @Autowired
+    private org.springframework.boot.actuate.endpoint.jackson.EndpointJsonMapper endpointMapper;
+
+    @Test
+    @DisplayName("actuator JSON: declaration order, ISO dates, nulls left out (Boot's former Jackson 2 endpoint mapper)")
+    void endpointMapper() {
+        record Health(String status, String detail, java.time.Instant at) {}
+        assertThat(endpointMapper.get().writeValueAsString(new Health("UP", null, java.time.Instant.ofEpochSecond(1_700_000_000L))))
+                .isEqualTo("{\"status\":\"UP\",\"at\":\"2023-11-14T22:13:20Z\"}");
+        assertThat(endpointMapper.get().tokenStreamFactory().streamReadConstraints().getMaxNestingDepth()).isEqualTo(1000);
+    }
 }

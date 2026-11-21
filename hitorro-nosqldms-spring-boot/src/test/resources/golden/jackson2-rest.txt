@@ -119,7 +119,7 @@ content-type:
 ### documents
 status: 200
 content-type: application/json
-["doc-#4","doc-#6","doc-#2"]
+["doc-#6","doc-#4","doc-#2"]
 
 ### document create second
 status: 200
@@ -352,7 +352,7 @@ content-type: application/json
 ### documents after tombstone
 status: 200
 content-type: application/json
-["doc-#11","doc-#4","doc-#6","doc-#2"]
+["doc-#11","doc-#6","doc-#4","doc-#2"]
 
 ### document tombstone missing
 status: 204
@@ -370,6 +370,26 @@ content-type: application/vnd.spring-boot.actuator.v3+json
 {}
 
 ### actuator metric jvm.threads.daemon
+status: 404
+content-type: 
+
+
+### actuator links
+status: 200
+content-type: application/vnd.spring-boot.actuator.v3+json
+{"_links":{"self":{"href":"http://localhost/actuator","templated":false},"info":{"href":"http://localhost/actuator/info","templated":false},"health":{"href":"http://localhost/actuator/health","templated":false},"health-path":{"href":"http://localhost/actuator/health/{*path}","templated":true},"metrics-requiredMetricName":{"href":"http://localhost/actuator/metrics/{requiredMetricName}","templated":true},"metrics":{"href":"http://localhost/actuator/metrics","templated":false}}}
+
+### actuator health liveness
+status: 200
+content-type: application/vnd.spring-boot.actuator.v3+json
+{"status":"UP"}
+
+### actuator metric jvm.threads.daemon value
+status: 200
+content-type: application/vnd.spring-boot.actuator.v3+json
+{"name":"jvm.threads.daemon","description":"The current number of live daemon threads","baseUnit":"threads","measurements":[{"statistic":"VALUE","value":0}],"availableTags":[]}
+
+### actuator metric missing
 status: 404
 content-type: 
 
