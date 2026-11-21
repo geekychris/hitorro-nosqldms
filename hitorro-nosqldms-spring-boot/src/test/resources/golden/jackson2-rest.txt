@@ -119,7 +119,7 @@ content-type:
 ### documents
 status: 200
 content-type: application/json
-["doc-#2","doc-#4","doc-#6"]
+["doc-#4","doc-#6","doc-#2"]
 
 ### document create second
 status: 200
@@ -352,7 +352,7 @@ content-type: application/json
 ### documents after tombstone
 status: 200
 content-type: application/json
-["doc-#2","doc-#4","doc-#6","doc-#11"]
+["doc-#11","doc-#4","doc-#6","doc-#2"]
 
 ### document tombstone missing
 status: 204
@@ -424,6 +424,18 @@ ok "fr_CA"
 
 ### converter-write locale-map-key
 ok {"fr_CA":1}
+
+### converter-write locale-script
+ok "zh_TW_#Hant"
+
+### converter-write locale-country-only
+ok "_US"
+
+### converter-write month
+ok "NOVEMBER"
+
+### converter-write day-of-week
+ok "FRIDAY"
 
 ### converter-write zoned-date-time
 ok "2026-11-20T13:45:30-08:00"
@@ -595,6 +607,33 @@ error HttpMessageNotReadableException
 
 ### converter-read target-locale-style-instant
 ok Target:count=0 name=null tags=null when=2026-11-20T12:45:30.123Z color=null ratio=0.0
+
+### converter-read-jdk locale
+ok JdkTarget:locale=fr_CA|fr-CA month=null byLocale=null
+
+### converter-read-jdk locale-tag
+ok JdkTarget:locale=fr_CA|fr-CA month=null byLocale=null
+
+### converter-read-jdk locale-script
+ok JdkTarget:locale=zh_TW_#Hant|zh-Hant-TW month=null byLocale=null
+
+### converter-read-jdk locale-extension
+ok JdkTarget:locale=de_DE_#u-co-phonebk|de-DE-u-co-phonebk month=null byLocale=null
+
+### converter-read-jdk locale-padded
+ok JdkTarget:locale=en_US|en-US month=null byLocale=null
+
+### converter-read-jdk locale-empty
+ok JdkTarget:locale=|und month=null byLocale=null
+
+### converter-read-jdk locale-map-key
+ok JdkTarget:locale=null month=null byLocale={sr__#Latn=1,  en =2}
+
+### converter-read-jdk month-name
+ok JdkTarget:locale=null month=NOVEMBER byLocale=null
+
+### converter-read-jdk month-number
+ok JdkTarget:locale=null month=NOVEMBER byLocale=null
 
 ### converter-read-map map
 ok LinkedHashMap{b=Integer:1,a=ArrayList[Integer:1,Double:2.5,String:s,null,Boolean:true,],c=LinkedHashMap{x=Double:1.1,},}
