@@ -3,8 +3,8 @@
  */
 package com.hitorro.dms.index.lucene;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import tools.jackson.databind.ObjectMapper;
+import com.hitorro.util.json.JsonMappers;
 import com.hitorro.dms.index.IndexSearcher;
 import com.hitorro.dms.index.IndexWriter;
 import com.hitorro.dms.model.ContentRef;
@@ -46,7 +46,8 @@ import java.util.Optional;
  */
 public class LuceneIndex implements IndexWriter, IndexSearcher {
 
-    private static final ObjectMapper JSON = new ObjectMapper().registerModule(new JavaTimeModule());
+    /** Writes {@code _source}. Jackson 2 defaults, as before: Instants as decimal epoch seconds. */
+    private static final ObjectMapper JSON = JsonMappers.json();
 
     private final Directory dir;
     private final StandardAnalyzer analyzer;

@@ -1,0 +1,690 @@
+### types
+status: 200
+content-type: application/json
+[{"name":"dms_wiki_page","title":"Wiki Page","description":"Long-form text page (extends dms_document → sysobject).","fields":[{"name":"summary","kind":"text","label":"Summary","required":false},{"name":"author_alias","kind":"string","label":"Author Alias","required":false},{"name":"status","kind":"enum","label":"Status","help":"Enum-like: draft / review / published / archived.","required":false,"choices":["draft","review","published","archived"]},{"name":"tags","kind":"array<string>","label":"Tags","required":false}]},{"name":"dms_task","title":"Task","description":"A single unit of work — extends dms_document.","fields":[{"name":"assignee","kind":"string","label":"Assignee","required":false},{"name":"status","kind":"enum","label":"Status","help":"Enum-like: todo / in-progress / blocked / done.","required":false,"choices":["todo","in-progress","blocked","done"]},{"name":"priority","kind":"enum","label":"Priority","help":"Enum-like: low / medium / high / urgent.","required":false,"choices":["low","medium","high","urgent"]},{"name":"due_date","kind":"date","label":"Due Date","required":false},{"name":"estimate_h","kind":"double","label":"Estimate H","required":false},{"name":"labels","kind":"array<string>","label":"Labels","required":false}]},{"name":"dms_contact","title":"Contact","description":"Person or organization contact — extends dms_document.","fields":[{"name":"first_name","kind":"string","label":"First Name","required":false},{"name":"last_name","kind":"string","label":"Last Name","required":false},{"name":"organization","kind":"string","label":"Organization","required":false},{"name":"email","kind":"string","label":"Email","required":false},{"name":"phone","kind":"string","label":"Phone","required":false},{"name":"website","kind":"url","label":"Website","required":false},{"name":"notes","kind":"text","label":"Notes","required":false}]},{"name":"dms_folder","title":"Folder","description":"A named container for other documents. Also a document itself.","fields":[{"name":"purpose","kind":"text","label":"Purpose","required":false},{"name":"owner","kind":"string","label":"Owner","required":false}]}]
+
+### type dms_document
+status: 200
+content-type: application/json
+{"name":"dms_document","title":"Document","description":"Base DMS document type — extends sysobject with versioning + rendition manifest fields shared by every managed document.","fields":[]}
+
+### type dms_wiki_page
+status: 200
+content-type: application/json
+{"name":"dms_wiki_page","title":"Wiki Page","description":"Long-form text page (extends dms_document → sysobject).","fields":[{"name":"summary","kind":"text","label":"Summary","required":false},{"name":"author_alias","kind":"string","label":"Author Alias","required":false},{"name":"status","kind":"enum","label":"Status","help":"Enum-like: draft / review / published / archived.","required":false,"choices":["draft","review","published","archived"]},{"name":"tags","kind":"array<string>","label":"Tags","required":false}]}
+
+### type dms_task
+status: 200
+content-type: application/json
+{"name":"dms_task","title":"Task","description":"A single unit of work — extends dms_document.","fields":[{"name":"assignee","kind":"string","label":"Assignee","required":false},{"name":"status","kind":"enum","label":"Status","help":"Enum-like: todo / in-progress / blocked / done.","required":false,"choices":["todo","in-progress","blocked","done"]},{"name":"priority","kind":"enum","label":"Priority","help":"Enum-like: low / medium / high / urgent.","required":false,"choices":["low","medium","high","urgent"]},{"name":"due_date","kind":"date","label":"Due Date","required":false},{"name":"estimate_h","kind":"double","label":"Estimate H","required":false},{"name":"labels","kind":"array<string>","label":"Labels","required":false}]}
+
+### type dms_contact
+status: 200
+content-type: application/json
+{"name":"dms_contact","title":"Contact","description":"Person or organization contact — extends dms_document.","fields":[{"name":"first_name","kind":"string","label":"First Name","required":false},{"name":"last_name","kind":"string","label":"Last Name","required":false},{"name":"organization","kind":"string","label":"Organization","required":false},{"name":"email","kind":"string","label":"Email","required":false},{"name":"phone","kind":"string","label":"Phone","required":false},{"name":"website","kind":"url","label":"Website","required":false},{"name":"notes","kind":"text","label":"Notes","required":false}]}
+
+### type dms_folder
+status: 200
+content-type: application/json
+{"name":"dms_folder","title":"Folder","description":"A named container for other documents. Also a document itself.","fields":[{"name":"purpose","kind":"text","label":"Purpose","required":false},{"name":"owner","kind":"string","label":"Owner","required":false}]}
+
+### type dms_content_ref
+status: 200
+content-type: application/json
+{"name":"dms_content_ref","title":"Content Ref","description":"One entry in a document's rendition manifest — points at a content blob by sha256.","fields":[{"name":"role","kind":"string","label":"Role","required":false},{"name":"mime","kind":"string","label":"Mime","required":false},{"name":"size_bytes","kind":"long","label":"Size Bytes","required":false},{"name":"sha256","kind":"string","label":"Sha256","required":false},{"name":"url","kind":"string","label":"Url","required":false},{"name":"inline","kind":"string","label":"Inline","required":false},{"name":"generated_by","kind":"string","label":"Generated By","required":false},{"name":"derived_from_role","kind":"string","label":"Derived From Role","required":false},{"name":"source_version_id","kind":"string","label":"Source Version Id","required":false},{"name":"attached_at","kind":"date","label":"Attached At","required":false}]}
+
+### type missing
+status: 404
+content-type: 
+
+
+### document create
+status: 200
+content-type: application/json
+{"versionId":"ver-#1","canonicalId":"doc-#2","versionLabel":"1.0.0","versionMajor":1,"versionMinor":0,"versionPatch":0,"versionBuild":1,"versionKind":"release","isHead":true,"isStable":true,"title":"Golden Spec","body":"The body mentions goldenkeyword and été.","description":"desc","contentType":"wiki-page","typeName":"dms_wiki_page","typeFields":{"priority":3,"ratio":1.1,"done":false,"tags":["a","b"],"nested":{"k":null,"n":[1,{"x":"y"}]},"when":"2026-11-20"},"createdBy":"user:alice","modifiedBy":"user:alice","createdAt":"~","modifiedAt":"~","contentRefs":[{"role":"primary","mime":"text/plain","sizeBytes":12,"sha256":"5d6436e5eaec98653e18ba7d5c3b8e4bc6dae31ac5bc65ea2e3e28f9933e6868","url":"blob://5d6436e5eaec98653e18ba7d5c3b8e4bc6dae31ac5bc65ea2e3e28f9933e6868","generatedBy":"user","sourceVersionId":"ver-#1","attachedAt":"~"}],"tombstoned":false}
+
+### document create minimal
+status: 200
+content-type: application/json
+{"versionId":"ver-#3","canonicalId":"doc-#4","versionLabel":"1.0.0","versionMajor":1,"versionMinor":0,"versionPatch":0,"versionBuild":1,"versionKind":"release","isHead":true,"isStable":true,"typeFields":{},"createdAt":"~","modifiedAt":"~","contentRefs":[],"tombstoned":false}
+
+### document create task
+status: 200
+content-type: application/json
+{"versionId":"ver-#5","canonicalId":"doc-#6","versionLabel":"1.0.0","versionMajor":1,"versionMinor":0,"versionPatch":0,"versionBuild":1,"versionKind":"release","isHead":true,"isStable":true,"title":"Task","contentType":"task","typeName":"dms_task","typeFields":{"due":"2026-12-01","assignee":"bob"},"createdAt":"~","modifiedAt":"~","contentRefs":[],"tombstoned":false}
+
+### document create malformed
+status: 400
+content-type: 
+
+
+### document create bad bytes
+status: 400
+content-type: 
+
+
+### document head
+status: 200
+content-type: application/json
+{"versionId":"ver-#1","canonicalId":"doc-#2","versionLabel":"1.0.0","versionMajor":1,"versionMinor":0,"versionPatch":0,"versionBuild":1,"versionKind":"release","isHead":true,"isStable":true,"title":"Golden Spec","body":"The body mentions goldenkeyword and été.","description":"desc","contentType":"wiki-page","typeName":"dms_wiki_page","typeFields":{"priority":3,"ratio":1.1,"done":false,"tags":["a","b"],"nested":{"k":null,"n":[1,{"x":"y"}]},"when":"2026-11-20"},"createdBy":"user:alice","modifiedBy":"user:alice","createdAt":"~","modifiedAt":"~","contentRefs":[{"role":"primary","mime":"text/plain","sizeBytes":12,"sha256":"5d6436e5eaec98653e18ba7d5c3b8e4bc6dae31ac5bc65ea2e3e28f9933e6868","url":"blob://5d6436e5eaec98653e18ba7d5c3b8e4bc6dae31ac5bc65ea2e3e28f9933e6868","generatedBy":"user","sourceVersionId":"ver-#1","attachedAt":"~"}],"tombstoned":false}
+
+### document head missing
+status: 404
+content-type: 
+
+
+### document check in minor
+status: 200
+content-type: application/json
+{"versionId":"ver-#7","canonicalId":"doc-#2","versionLabel":"1.1.0","versionMajor":1,"versionMinor":1,"versionPatch":0,"versionBuild":2,"versionKind":"release","parentVersion":"ver-#1","isHead":true,"isStable":true,"title":"Golden Spec v2","body":"The body mentions goldenkeyword and été.","description":"desc","contentType":"wiki-page","typeName":"dms_wiki_page","typeFields":{"priority":3,"ratio":1.1,"done":false,"tags":["a","b"],"nested":{"k":null,"n":[1,{"x":"y"}]},"when":"2026-11-20"},"createdBy":"user:alice","modifiedBy":"user:bob","createdAt":"~","modifiedAt":"~","contentRefs":[{"role":"primary","mime":"text/plain","sizeBytes":12,"sha256":"5d6436e5eaec98653e18ba7d5c3b8e4bc6dae31ac5bc65ea2e3e28f9933e6868","url":"blob://5d6436e5eaec98653e18ba7d5c3b8e4bc6dae31ac5bc65ea2e3e28f9933e6868","generatedBy":"user","sourceVersionId":"ver-#1","attachedAt":"~"}],"tombstoned":false}
+
+### document check in major qualifier
+status: 200
+content-type: application/json
+{"versionId":"ver-#8","canonicalId":"doc-#2","versionLabel":"2.0.0-alpha31","versionMajor":2,"versionMinor":0,"versionPatch":0,"versionQualifier":"alpha3","versionQualNumber":1,"versionBuild":3,"versionKind":"draft","parentVersion":"ver-#7","isHead":true,"isStable":false,"title":"Golden Spec v2","body":"The body mentions goldenkeyword and été.","description":"desc","contentType":"wiki-page","typeName":"dms_wiki_page","typeFields":{"priority":1,"ratio":1.1,"done":false,"tags":["a","b"],"nested":{"k":null,"n":[1,{"x":"y"}]},"when":"2026-11-20"},"createdBy":"user:alice","createdAt":"~","modifiedAt":"~","contentRefs":[{"role":"primary","mime":"text/plain","sizeBytes":12,"sha256":"5d6436e5eaec98653e18ba7d5c3b8e4bc6dae31ac5bc65ea2e3e28f9933e6868","url":"blob://5d6436e5eaec98653e18ba7d5c3b8e4bc6dae31ac5bc65ea2e3e28f9933e6868","generatedBy":"user","sourceVersionId":"ver-#1","attachedAt":"~"}],"tombstoned":false}
+
+### document check in patch
+status: 200
+content-type: application/json
+{"versionId":"ver-#9","canonicalId":"doc-#2","versionLabel":"2.0.1","versionMajor":2,"versionMinor":0,"versionPatch":1,"versionBuild":4,"versionKind":"release","parentVersion":"ver-#8","isHead":true,"isStable":true,"title":"Golden Spec v2","body":"The body mentions goldenkeyword and été.","description":"desc","contentType":"wiki-page","typeName":"dms_wiki_page","typeFields":{"priority":1,"ratio":1.1,"done":false,"tags":["a","b"],"nested":{"k":null,"n":[1,{"x":"y"}]},"when":"2026-11-20"},"createdBy":"user:alice","createdAt":"~","modifiedAt":"~","contentRefs":[{"role":"primary","mime":"text/plain","sizeBytes":12,"sha256":"5d6436e5eaec98653e18ba7d5c3b8e4bc6dae31ac5bc65ea2e3e28f9933e6868","url":"blob://5d6436e5eaec98653e18ba7d5c3b8e4bc6dae31ac5bc65ea2e3e28f9933e6868","generatedBy":"user","sourceVersionId":"ver-#1","attachedAt":"~"}],"tombstoned":false}
+
+### document check in bad kind
+status: 400
+content-type: 
+
+
+### document check in missing
+exception: ServletException caused by IllegalArgumentException
+
+### document versions
+status: 200
+content-type: application/json
+[{"versionId":"ver-#1","canonicalId":"doc-#2","versionLabel":"1.0.0","versionMajor":1,"versionMinor":0,"versionPatch":0,"versionBuild":1,"versionKind":"release","isHead":false,"isStable":true,"title":"Golden Spec","body":"The body mentions goldenkeyword and été.","description":"desc","contentType":"wiki-page","typeName":"dms_wiki_page","typeFields":{"priority":3,"ratio":1.1,"done":false,"tags":["a","b"],"nested":{"k":null,"n":[1,{"x":"y"}]},"when":"2026-11-20"},"createdBy":"user:alice","modifiedBy":"user:alice","createdAt":"~","modifiedAt":"~","contentRefs":[{"role":"primary","mime":"text/plain","sizeBytes":12,"sha256":"5d6436e5eaec98653e18ba7d5c3b8e4bc6dae31ac5bc65ea2e3e28f9933e6868","url":"blob://5d6436e5eaec98653e18ba7d5c3b8e4bc6dae31ac5bc65ea2e3e28f9933e6868","generatedBy":"user","sourceVersionId":"ver-#1","attachedAt":"~"}],"tombstoned":false},{"versionId":"ver-#7","canonicalId":"doc-#2","versionLabel":"1.1.0","versionMajor":1,"versionMinor":1,"versionPatch":0,"versionBuild":2,"versionKind":"release","parentVersion":"ver-#1","isHead":false,"isStable":true,"title":"Golden Spec v2","body":"The body mentions goldenkeyword and été.","description":"desc","contentType":"wiki-page","typeName":"dms_wiki_page","typeFields":{"priority":3,"ratio":1.1,"done":false,"tags":["a","b"],"nested":{"k":null,"n":[1,{"x":"y"}]},"when":"2026-11-20"},"createdBy":"user:alice","modifiedBy":"user:bob","createdAt":"~","modifiedAt":"~","contentRefs":[{"role":"primary","mime":"text/plain","sizeBytes":12,"sha256":"5d6436e5eaec98653e18ba7d5c3b8e4bc6dae31ac5bc65ea2e3e28f9933e6868","url":"blob://5d6436e5eaec98653e18ba7d5c3b8e4bc6dae31ac5bc65ea2e3e28f9933e6868","generatedBy":"user","sourceVersionId":"ver-#1","attachedAt":"~"}],"tombstoned":false},{"versionId":"ver-#8","canonicalId":"doc-#2","versionLabel":"2.0.0-alpha31","versionMajor":2,"versionMinor":0,"versionPatch":0,"versionQualifier":"alpha3","versionQualNumber":1,"versionBuild":3,"versionKind":"draft","parentVersion":"ver-#7","isHead":false,"isStable":false,"title":"Golden Spec v2","body":"The body mentions goldenkeyword and été.","description":"desc","contentType":"wiki-page","typeName":"dms_wiki_page","typeFields":{"priority":1,"ratio":1.1,"done":false,"tags":["a","b"],"nested":{"k":null,"n":[1,{"x":"y"}]},"when":"2026-11-20"},"createdBy":"user:alice","createdAt":"~","modifiedAt":"~","contentRefs":[{"role":"primary","mime":"text/plain","sizeBytes":12,"sha256":"5d6436e5eaec98653e18ba7d5c3b8e4bc6dae31ac5bc65ea2e3e28f9933e6868","url":"blob://5d6436e5eaec98653e18ba7d5c3b8e4bc6dae31ac5bc65ea2e3e28f9933e6868","generatedBy":"user","sourceVersionId":"ver-#1","attachedAt":"~"}],"tombstoned":false},{"versionId":"ver-#9","canonicalId":"doc-#2","versionLabel":"2.0.1","versionMajor":2,"versionMinor":0,"versionPatch":1,"versionBuild":4,"versionKind":"release","parentVersion":"ver-#8","isHead":true,"isStable":true,"title":"Golden Spec v2","body":"The body mentions goldenkeyword and été.","description":"desc","contentType":"wiki-page","typeName":"dms_wiki_page","typeFields":{"priority":1,"ratio":1.1,"done":false,"tags":["a","b"],"nested":{"k":null,"n":[1,{"x":"y"}]},"when":"2026-11-20"},"createdBy":"user:alice","createdAt":"~","modifiedAt":"~","contentRefs":[{"role":"primary","mime":"text/plain","sizeBytes":12,"sha256":"5d6436e5eaec98653e18ba7d5c3b8e4bc6dae31ac5bc65ea2e3e28f9933e6868","url":"blob://5d6436e5eaec98653e18ba7d5c3b8e4bc6dae31ac5bc65ea2e3e28f9933e6868","generatedBy":"user","sourceVersionId":"ver-#1","attachedAt":"~"}],"tombstoned":false}]
+
+### document version 1.0.0
+status: 200
+content-type: application/json
+{"versionId":"ver-#1","canonicalId":"doc-#2","versionLabel":"1.0.0","versionMajor":1,"versionMinor":0,"versionPatch":0,"versionBuild":1,"versionKind":"release","isHead":false,"isStable":true,"title":"Golden Spec","body":"The body mentions goldenkeyword and été.","description":"desc","contentType":"wiki-page","typeName":"dms_wiki_page","typeFields":{"priority":3,"ratio":1.1,"done":false,"tags":["a","b"],"nested":{"k":null,"n":[1,{"x":"y"}]},"when":"2026-11-20"},"createdBy":"user:alice","modifiedBy":"user:alice","createdAt":"~","modifiedAt":"~","contentRefs":[{"role":"primary","mime":"text/plain","sizeBytes":12,"sha256":"5d6436e5eaec98653e18ba7d5c3b8e4bc6dae31ac5bc65ea2e3e28f9933e6868","url":"blob://5d6436e5eaec98653e18ba7d5c3b8e4bc6dae31ac5bc65ea2e3e28f9933e6868","generatedBy":"user","sourceVersionId":"ver-#1","attachedAt":"~"}],"tombstoned":false}
+
+### document version by id
+status: 404
+content-type: 
+
+
+### document version missing
+status: 404
+content-type: 
+
+
+### documents
+status: 200
+content-type: application/json
+["doc-#6","doc-#4","doc-#2"]
+
+### document create second
+status: 200
+content-type: application/json
+{"versionId":"ver-#10","canonicalId":"doc-#11","versionLabel":"1.0.0","versionMajor":1,"versionMinor":0,"versionPatch":0,"versionBuild":1,"versionKind":"release","isHead":true,"isStable":true,"title":"Second","contentType":"wiki-page","typeName":"wiki-page","typeFields":{},"createdBy":"bob","modifiedBy":"bob","createdAt":"~","modifiedAt":"~","contentRefs":[],"tombstoned":false}
+
+### renditions head
+status: 200
+content-type: application/json
+[{"role":"primary","mime":"text/plain","sizeBytes":12,"sha256":"5d6436e5eaec98653e18ba7d5c3b8e4bc6dae31ac5bc65ea2e3e28f9933e6868","url":"blob://5d6436e5eaec98653e18ba7d5c3b8e4bc6dae31ac5bc65ea2e3e28f9933e6868","generatedBy":"user","sourceVersionId":"ver-#1","attachedAt":"~"}]
+
+### rendition document head
+status: 200
+content-type: application/json
+{"versionId":"ver-#9","canonicalId":"doc-#2","versionLabel":"2.0.1","versionMajor":2,"versionMinor":0,"versionPatch":1,"versionBuild":4,"versionKind":"release","parentVersion":"ver-#8","isHead":true,"isStable":true,"title":"Golden Spec v2","body":"The body mentions goldenkeyword and été.","description":"desc","contentType":"wiki-page","typeName":"dms_wiki_page","typeFields":{"priority":1,"ratio":1.1,"done":false,"tags":["a","b"],"nested":{"k":null,"n":[1,{"x":"y"}]},"when":"2026-11-20"},"createdBy":"user:alice","createdAt":"~","modifiedAt":"~","contentRefs":[{"role":"primary","mime":"text/plain","sizeBytes":12,"sha256":"5d6436e5eaec98653e18ba7d5c3b8e4bc6dae31ac5bc65ea2e3e28f9933e6868","url":"blob://5d6436e5eaec98653e18ba7d5c3b8e4bc6dae31ac5bc65ea2e3e28f9933e6868","generatedBy":"user","sourceVersionId":"ver-#1","attachedAt":"~"}],"tombstoned":false}
+
+### rendition attach
+status: 200
+content-type: application/json
+{"versionId":"ver-#9","canonicalId":"doc-#2","versionLabel":"2.0.1","versionMajor":2,"versionMinor":0,"versionPatch":1,"versionBuild":4,"versionKind":"release","parentVersion":"ver-#8","isHead":true,"isStable":true,"title":"Golden Spec v2","body":"The body mentions goldenkeyword and été.","description":"desc","contentType":"wiki-page","typeName":"dms_wiki_page","typeFields":{"priority":1,"ratio":1.1,"done":false,"tags":["a","b"],"nested":{"k":null,"n":[1,{"x":"y"}]},"when":"2026-11-20"},"createdBy":"user:alice","createdAt":"~","modifiedAt":"~","contentRefs":[{"role":"primary","mime":"text/plain","sizeBytes":12,"sha256":"5d6436e5eaec98653e18ba7d5c3b8e4bc6dae31ac5bc65ea2e3e28f9933e6868","url":"blob://5d6436e5eaec98653e18ba7d5c3b8e4bc6dae31ac5bc65ea2e3e28f9933e6868","generatedBy":"user","sourceVersionId":"ver-#1","attachedAt":"~"},{"role":"thumbnail","mime":"image/png;charset=UTF-8","sizeBytes":4,"sha256":"0f4636c78f65d3639ece5a064b5ae753e3408614a14fb18ab4d7540d2c248543","url":"blob://0f4636c78f65d3639ece5a064b5ae753e3408614a14fb18ab4d7540d2c248543","generatedBy":"pipeline:thumbs","sourceVersionId":"ver-#9","attachedAt":"~"}],"tombstoned":false}
+
+### rendition attach text
+status: 200
+content-type: application/json
+{"versionId":"ver-#9","canonicalId":"doc-#2","versionLabel":"2.0.1","versionMajor":2,"versionMinor":0,"versionPatch":1,"versionBuild":4,"versionKind":"release","parentVersion":"ver-#8","isHead":true,"isStable":true,"title":"Golden Spec v2","body":"The body mentions goldenkeyword and été.","description":"desc","contentType":"wiki-page","typeName":"dms_wiki_page","typeFields":{"priority":1,"ratio":1.1,"done":false,"tags":["a","b"],"nested":{"k":null,"n":[1,{"x":"y"}]},"when":"2026-11-20"},"createdBy":"user:alice","createdAt":"~","modifiedAt":"~","contentRefs":[{"role":"primary","mime":"text/plain","sizeBytes":12,"sha256":"5d6436e5eaec98653e18ba7d5c3b8e4bc6dae31ac5bc65ea2e3e28f9933e6868","url":"blob://5d6436e5eaec98653e18ba7d5c3b8e4bc6dae31ac5bc65ea2e3e28f9933e6868","generatedBy":"user","sourceVersionId":"ver-#1","attachedAt":"~"},{"role":"thumbnail","mime":"image/png;charset=UTF-8","sizeBytes":4,"sha256":"0f4636c78f65d3639ece5a064b5ae753e3408614a14fb18ab4d7540d2c248543","url":"blob://0f4636c78f65d3639ece5a064b5ae753e3408614a14fb18ab4d7540d2c248543","generatedBy":"pipeline:thumbs","sourceVersionId":"ver-#9","attachedAt":"~"},{"role":"extract","mime":"text/plain;charset=UTF-8","sizeBytes":14,"sha256":"0269bedfdc4c8cbe4a787272f815c891875912af9da96ba0f6472f16801a3b77","url":"blob://0269bedfdc4c8cbe4a787272f815c891875912af9da96ba0f6472f16801a3b77","generatedBy":"user","sourceVersionId":"ver-#9","attachedAt":"~"}],"tombstoned":false}
+
+### renditions version
+status: 200
+content-type: application/json
+[{"role":"primary","mime":"text/plain","sizeBytes":12,"sha256":"5d6436e5eaec98653e18ba7d5c3b8e4bc6dae31ac5bc65ea2e3e28f9933e6868","url":"blob://5d6436e5eaec98653e18ba7d5c3b8e4bc6dae31ac5bc65ea2e3e28f9933e6868","generatedBy":"user","sourceVersionId":"ver-#1","attachedAt":"~"},{"role":"thumbnail","mime":"image/png;charset=UTF-8","sizeBytes":4,"sha256":"0f4636c78f65d3639ece5a064b5ae753e3408614a14fb18ab4d7540d2c248543","url":"blob://0f4636c78f65d3639ece5a064b5ae753e3408614a14fb18ab4d7540d2c248543","generatedBy":"pipeline:thumbs","sourceVersionId":"ver-#9","attachedAt":"~"},{"role":"extract","mime":"text/plain;charset=UTF-8","sizeBytes":14,"sha256":"0269bedfdc4c8cbe4a787272f815c891875912af9da96ba0f6472f16801a3b77","url":"blob://0269bedfdc4c8cbe4a787272f815c891875912af9da96ba0f6472f16801a3b77","generatedBy":"user","sourceVersionId":"ver-#9","attachedAt":"~"}]
+
+### rendition read
+status: 200
+content-type: text/plain;charset=UTF-8
+extracted text
+
+### rendition read version
+status: 200
+content-type: image/png;charset=UTF-8
+�PNG
+
+### rendition read missing
+status: 404
+content-type: 
+
+
+### rendition delete
+status: 204
+content-type: 
+
+
+### renditions after delete
+status: 200
+content-type: application/json
+[{"role":"primary","mime":"text/plain","sizeBytes":12,"sha256":"5d6436e5eaec98653e18ba7d5c3b8e4bc6dae31ac5bc65ea2e3e28f9933e6868","url":"blob://5d6436e5eaec98653e18ba7d5c3b8e4bc6dae31ac5bc65ea2e3e28f9933e6868","generatedBy":"user","sourceVersionId":"ver-#1","attachedAt":"~"},{"role":"extract","mime":"text/plain;charset=UTF-8","sizeBytes":14,"sha256":"0269bedfdc4c8cbe4a787272f815c891875912af9da96ba0f6472f16801a3b77","url":"blob://0269bedfdc4c8cbe4a787272f815c891875912af9da96ba0f6472f16801a3b77","generatedBy":"user","sourceVersionId":"ver-#9","attachedAt":"~"}]
+
+### renditions missing doc
+status: 404
+content-type: 
+
+
+### folder link
+status: 204
+content-type: 
+
+
+### folder link 2
+status: 204
+content-type: 
+
+
+### folder link other
+status: 204
+content-type: 
+
+
+### folder contents
+status: 200
+content-type: application/json
+[{"folderCanonical":"folder-eng","childCanonical":"doc-#2","addedBy":"alice","addedAt":"~"},{"folderCanonical":"folder-eng","childCanonical":"doc-#11","addedBy":"unknown","addedAt":"~"}]
+
+### folders for doc
+status: 200
+content-type: application/json
+[{"folderCanonical":"folder-eng","childCanonical":"doc-#2","addedBy":"alice","addedAt":"~"},{"folderCanonical":"folder-ops","childCanonical":"doc-#2","addedBy":"unknown","addedAt":"~"}]
+
+### folder unlink
+status: 204
+content-type: 
+
+
+### folder contents after unlink
+status: 200
+content-type: application/json
+[{"folderCanonical":"folder-eng","childCanonical":"doc-#2","addedBy":"alice","addedAt":"~"}]
+
+### folder contents empty
+status: 200
+content-type: application/json
+[]
+
+### reference add
+status: 200
+content-type: application/json
+{"fromCanonical":"doc-#2","toCanonical":"doc-#11","kind":"cites","aux":"p.3"}
+
+### reference add pinned
+status: 200
+content-type: application/json
+{"fromCanonical":"doc-#2","toCanonical":"doc-#11","toVersion":"1.0.0","kind":"embeds","createdAt":"~"}
+
+### references outbound
+status: 200
+content-type: application/json
+[{"fromCanonical":"doc-#2","toCanonical":"doc-#11","kind":"cites","aux":"p.3"},{"fromCanonical":"doc-#2","toCanonical":"doc-#11","toVersion":"1.0.0","kind":"embeds","createdAt":"~"}]
+
+### references inbound
+status: 200
+content-type: application/json
+[{"fromCanonical":"doc-#2","toCanonical":"doc-#11","kind":"cites","aux":"p.3"},{"fromCanonical":"doc-#2","toCanonical":"doc-#11","toVersion":"1.0.0","kind":"embeds","createdAt":"~"}]
+
+### reference remove
+status: 204
+content-type: 
+
+
+### references after remove
+status: 200
+content-type: application/json
+[{"fromCanonical":"doc-#2","toCanonical":"doc-#11","toVersion":"1.0.0","kind":"embeds","createdAt":"~"}]
+
+### acl grant
+status: 200
+content-type: application/json
+{"canonicalId":"doc-#2","principal":"user:alice","permission":"read","grant":true}
+
+### acl deny
+status: 200
+content-type: application/json
+{"canonicalId":"doc-#2","principal":"group:ops","permission":"write","grant":false,"inheritFrom":"folder-eng"}
+
+### acls
+status: 200
+content-type: application/json
+[{"canonicalId":"doc-#2","principal":"user:alice","permission":"read","grant":true},{"canonicalId":"doc-#2","principal":"group:ops","permission":"write","grant":false,"inheritFrom":"folder-eng"}]
+
+### acl revoke
+status: 204
+content-type: 
+
+
+### acls after revoke
+status: 200
+content-type: application/json
+[{"canonicalId":"doc-#2","principal":"group:ops","permission":"write","grant":false,"inheritFrom":"folder-eng"}]
+
+### tag
+status: 204
+content-type: 
+
+
+### tag 2
+status: 204
+content-type: 
+
+
+### tag other doc
+status: 204
+content-type: 
+
+
+### tags
+status: 200
+content-type: application/json
+["golden","spec"]
+
+### docs with tag
+status: 200
+content-type: application/json
+["doc-#2","doc-#11"]
+
+### untag
+status: 204
+content-type: 
+
+
+### tags after untag
+status: 200
+content-type: application/json
+["golden"]
+
+### search body
+status: 200
+content-type: application/json
+[{"versionId":"ver-#1","canonicalId":"doc-#2","versionLabel":"1.0.0","title":"Golden Spec","score":0.1767331063747406},{"versionId":"ver-#7","canonicalId":"doc-#2","versionLabel":"1.1.0","title":"Golden Spec v2","score":0.17326775193214417},{"versionId":"ver-#8","canonicalId":"doc-#2","versionLabel":"2.0.0-alpha31","title":"Golden Spec v2","score":0.17326775193214417},{"versionId":"ver-#9","canonicalId":"doc-#2","versionLabel":"2.0.1","title":"Golden Spec v2","score":0.17326775193214417}]
+
+### search title
+status: 200
+content-type: application/json
+[{"versionId":"ver-#10","canonicalId":"doc-#11","versionLabel":"1.0.0","title":"Second","score":0.8980172872543335}]
+
+### search all limit
+status: 200
+content-type: application/json
+[{"versionId":"ver-#3","canonicalId":"doc-#4","versionLabel":"1.0.0","title":null,"score":1.0},{"versionId":"ver-#5","canonicalId":"doc-#6","versionLabel":"1.0.0","title":"Task","score":1.0}]
+
+### search typed field
+status: 200
+content-type: application/json
+[{"versionId":"ver-#5","canonicalId":"doc-#6","versionLabel":"1.0.0","title":"Task","score":0.13076457381248474}]
+
+### search bad syntax
+exception: ServletException caused by ParseException
+
+### search none
+status: 200
+content-type: application/json
+[]
+
+### document tombstone
+status: 204
+content-type: 
+
+
+### document after tombstone
+status: 200
+content-type: application/json
+{"versionId":"ver-#10","canonicalId":"doc-#11","versionLabel":"1.0.0","versionMajor":1,"versionMinor":0,"versionPatch":0,"versionBuild":1,"versionKind":"release","isHead":true,"isStable":true,"title":"Second","contentType":"wiki-page","typeName":"wiki-page","typeFields":{},"createdBy":"bob","modifiedBy":"bob","createdAt":"~","modifiedAt":"~","contentRefs":[],"tombstoned":false}
+
+### documents after tombstone
+status: 200
+content-type: application/json
+["doc-#11","doc-#6","doc-#4","doc-#2"]
+
+### document tombstone missing
+status: 204
+content-type: 
+
+
+### actuator health
+status: 200
+content-type: application/vnd.spring-boot.actuator.v3+json
+{"status":"UP","groups":["liveness","readiness"]}
+
+### actuator info
+status: 200
+content-type: application/vnd.spring-boot.actuator.v3+json
+{}
+
+### actuator metric jvm.threads.daemon
+status: 404
+content-type: 
+
+
+### actuator links
+status: 200
+content-type: application/vnd.spring-boot.actuator.v3+json
+{"_links":{"self":{"href":"http://localhost/actuator","templated":false},"info":{"href":"http://localhost/actuator/info","templated":false},"health":{"href":"http://localhost/actuator/health","templated":false},"health-path":{"href":"http://localhost/actuator/health/{*path}","templated":true},"metrics-requiredMetricName":{"href":"http://localhost/actuator/metrics/{requiredMetricName}","templated":true},"metrics":{"href":"http://localhost/actuator/metrics","templated":false}}}
+
+### actuator health liveness
+status: 200
+content-type: application/vnd.spring-boot.actuator.v3+json
+{"status":"UP"}
+
+### actuator metric jvm.threads.daemon value
+status: 200
+content-type: application/vnd.spring-boot.actuator.v3+json
+{"name":"jvm.threads.daemon","description":"The current number of live daemon threads","baseUnit":"threads","measurements":[{"statistic":"VALUE","value":0}],"availableTags":[]}
+
+### actuator metric missing
+status: 404
+content-type: 
+
+
+### lucene _source
+{"versionId":"ver-#1","canonicalId":"doc-#2","versionLabel":"1.0.0","versionMajor":1,"versionMinor":0,"versionPatch":0,"versionBuild":1,"versionKind":"release","isHead":false,"isStable":true,"title":"Golden Spec","body":"The body mentions goldenkeyword and été.","description":"desc","contentType":"wiki-page","typeName":"dms_wiki_page","typeFields":{"priority":3,"ratio":1.1,"done":false,"tags":["a","b"],"nested":{"k":null,"n":[1,{"x":"y"}]},"when":"2026-11-20"},"createdBy":"user:alice","modifiedBy":"user:alice","createdAt":~,"modifiedAt":~,"contentRefs":[{"role":"primary","mime":"text/plain","sizeBytes":12,"sha256":"5d6436e5eaec98653e18ba7d5c3b8e4bc6dae31ac5bc65ea2e3e28f9933e6868","url":"blob://5d6436e5eaec98653e18ba7d5c3b8e4bc6dae31ac5bc65ea2e3e28f9933e6868","generatedBy":"user","sourceVersionId":"ver-#1","attachedAt":~}],"tombstoned":false}
+{"versionId":"ver-#10","canonicalId":"doc-#11","versionLabel":"1.0.0","versionMajor":1,"versionMinor":0,"versionPatch":0,"versionBuild":1,"versionKind":"release","isHead":true,"isStable":true,"title":"Second","contentType":"wiki-page","typeName":"wiki-page","typeFields":{},"createdBy":"bob","modifiedBy":"bob","createdAt":~,"modifiedAt":~,"contentRefs":[],"tombstoned":false}
+{"versionId":"ver-#3","canonicalId":"doc-#4","versionLabel":"1.0.0","versionMajor":1,"versionMinor":0,"versionPatch":0,"versionBuild":1,"versionKind":"release","isHead":true,"isStable":true,"typeFields":{},"createdAt":~,"modifiedAt":~,"contentRefs":[],"tombstoned":false}
+{"versionId":"ver-#5","canonicalId":"doc-#6","versionLabel":"1.0.0","versionMajor":1,"versionMinor":0,"versionPatch":0,"versionBuild":1,"versionKind":"release","isHead":true,"isStable":true,"title":"Task","contentType":"task","typeName":"dms_task","typeFields":{"due":"2026-12-01","assignee":"bob"},"createdAt":~,"modifiedAt":~,"contentRefs":[],"tombstoned":false}
+{"versionId":"ver-#7","canonicalId":"doc-#2","versionLabel":"1.1.0","versionMajor":1,"versionMinor":1,"versionPatch":0,"versionBuild":2,"versionKind":"release","parentVersion":"ver-#1","isHead":false,"isStable":true,"title":"Golden Spec v2","body":"The body mentions goldenkeyword and été.","description":"desc","contentType":"wiki-page","typeName":"dms_wiki_page","typeFields":{"priority":3,"ratio":1.1,"done":false,"tags":["a","b"],"nested":{"k":null,"n":[1,{"x":"y"}]},"when":"2026-11-20"},"createdBy":"user:alice","modifiedBy":"user:bob","createdAt":~,"modifiedAt":~,"contentRefs":[{"role":"primary","mime":"text/plain","sizeBytes":12,"sha256":"5d6436e5eaec98653e18ba7d5c3b8e4bc6dae31ac5bc65ea2e3e28f9933e6868","url":"blob://5d6436e5eaec98653e18ba7d5c3b8e4bc6dae31ac5bc65ea2e3e28f9933e6868","generatedBy":"user","sourceVersionId":"ver-#1","attachedAt":~}],"tombstoned":false}
+{"versionId":"ver-#8","canonicalId":"doc-#2","versionLabel":"2.0.0-alpha31","versionMajor":2,"versionMinor":0,"versionPatch":0,"versionQualifier":"alpha3","versionQualNumber":1,"versionBuild":3,"versionKind":"draft","parentVersion":"ver-#7","isHead":false,"isStable":false,"title":"Golden Spec v2","body":"The body mentions goldenkeyword and été.","description":"desc","contentType":"wiki-page","typeName":"dms_wiki_page","typeFields":{"priority":1,"ratio":1.1,"done":false,"tags":["a","b"],"nested":{"k":null,"n":[1,{"x":"y"}]},"when":"2026-11-20"},"createdBy":"user:alice","createdAt":~,"modifiedAt":~,"contentRefs":[{"role":"primary","mime":"text/plain","sizeBytes":12,"sha256":"5d6436e5eaec98653e18ba7d5c3b8e4bc6dae31ac5bc65ea2e3e28f9933e6868","url":"blob://5d6436e5eaec98653e18ba7d5c3b8e4bc6dae31ac5bc65ea2e3e28f9933e6868","generatedBy":"user","sourceVersionId":"ver-#1","attachedAt":~}],"tombstoned":false}
+{"versionId":"ver-#9","canonicalId":"doc-#2","versionLabel":"2.0.1","versionMajor":2,"versionMinor":0,"versionPatch":1,"versionBuild":4,"versionKind":"release","parentVersion":"ver-#8","isHead":true,"isStable":true,"title":"Golden Spec v2","body":"The body mentions goldenkeyword and été.","description":"desc","contentType":"wiki-page","typeName":"dms_wiki_page","typeFields":{"priority":1,"ratio":1.1,"done":false,"tags":["a","b"],"nested":{"k":null,"n":[1,{"x":"y"}]},"when":"2026-11-20"},"createdBy":"user:alice","createdAt":~,"modifiedAt":~,"contentRefs":[{"role":"primary","mime":"text/plain","sizeBytes":12,"sha256":"5d6436e5eaec98653e18ba7d5c3b8e4bc6dae31ac5bc65ea2e3e28f9933e6868","url":"blob://5d6436e5eaec98653e18ba7d5c3b8e4bc6dae31ac5bc65ea2e3e28f9933e6868","generatedBy":"user","sourceVersionId":"ver-#1","attachedAt":~},{"role":"extract","mime":"text/plain;charset=UTF-8","sizeBytes":14,"sha256":"0269bedfdc4c8cbe4a787272f815c891875912af9da96ba0f6472f16801a3b77","url":"blob://0269bedfdc4c8cbe4a787272f815c891875912af9da96ba0f6472f16801a3b77","generatedBy":"user","sourceVersionId":"ver-#9","attachedAt":~}],"tombstoned":false}
+
+### converter-write record
+ok {"zeta":"z","alpha":2,"when":"2023-11-14T22:13:20.123Z","tags":["a","b"]}
+
+### converter-write bean
+ok {"zulu":"z","alpha":1,"nothing":null,"created":"2023-11-14T22:13:20.123+00:00","day":"2026-11-20","active":true}
+
+### converter-write empty-bean
+error HttpMessageConversionException
+
+### converter-write instant
+ok "2023-11-14T22:13:20.123456789Z"
+
+### converter-write local-date
+ok "2026-11-20"
+
+### converter-write local-date-time
+ok "2026-11-20T13:45:30.5"
+
+### converter-write offset-date-time
+ok "2026-11-20T13:45:30-08:00"
+
+### converter-write duration
+ok "PT1M30.000000005S"
+
+### converter-write util-date
+ok "2023-11-14T22:13:20.123+00:00"
+
+### converter-write optional-present
+ok "x"
+
+### converter-write optional-empty
+ok null
+
+### converter-write enum
+ok "GREEN"
+
+### converter-write locale
+ok "fr_CA"
+
+### converter-write locale-map-key
+ok {"fr_CA":1}
+
+### converter-write locale-script
+ok "zh_TW_#Hant"
+
+### converter-write locale-country-only
+ok "_US"
+
+### converter-write month
+ok "NOVEMBER"
+
+### converter-write day-of-week
+ok "FRIDAY"
+
+### converter-write zoned-date-time
+ok "2026-11-20T13:45:30-08:00"
+
+### converter-write local-time
+ok "13:45:30.001"
+
+### converter-write year-month
+ok "2026-11"
+
+### converter-write period
+ok "P1Y2M3D"
+
+### converter-write zone-id
+ok "Europe/Berlin"
+
+### converter-write sql-timestamp
+ok "2023-11-14T22:13:20.123+00:00"
+
+### converter-write calendar
+ok "2023-11-14T22:13:20.123+00:00"
+
+### converter-write uri
+ok "https://example.com/a?b=c"
+
+### converter-write path
+ok "file:///tmp/x"
+
+### converter-write file
+ok "/tmp/x"
+
+### converter-write class
+ok "java.lang.String"
+
+### converter-write pattern
+ok "a+b"
+
+### converter-write atomic
+ok 5
+
+### converter-write charset
+ok "UTF-8"
+
+### converter-write currency
+ok "EUR"
+
+### converter-write time-zone
+ok "UTC"
+
+### converter-write inet
+ok "localhost"
+
+### converter-write stream-of-ints
+ok [0,1,2]
+
+### converter-write set
+ok ["b","a"]
+
+### converter-write uuid
+ok "123e4567-e89b-12d3-a456-426614174000"
+
+### converter-write bytes
+ok "AQID/w=="
+
+### converter-write chars
+ok "hi"
+
+### converter-write big-decimal
+ok 1E+30
+
+### converter-write big-decimal-plain
+ok 12.50
+
+### converter-write big-integer
+ok 123456789012345678901234567890
+
+### converter-write double-nan
+ok "NaN"
+
+### converter-write double-inf
+ok "Infinity"
+
+### converter-write float
+ok 1.1
+
+### converter-write double
+ok 0.30000000000000004
+
+### converter-write long-max
+ok 9223372036854775807
+
+### converter-write map-odd-keys
+error HttpMessageNotWritableException
+
+### converter-write map-null-values
+ok {"b":null,"a":1}
+
+### converter-write tree-map
+ok {"a":2,"b":1}
+
+### converter-write string-escapes
+ok "quote\" backslash\\ tab\t nl\n ctrl\u0001 unié emoji\uD83D\uDE00 slash/ lt< amp&"
+
+### converter-write nested-400
+ok [[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[...(809 chars)
+
+### converter-write nested-1000
+ok [[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[...(2009 chars)
+
+### converter-write nested-1001
+error HttpMessageNotWritableException
+
+### converter-read target
+ok Target:count=3 name=n tags=[x] when=2026-11-20T13:45:30Z color=RED ratio=0.5
+
+### converter-read target-unknown-property
+ok Target:count=3 name=null tags=null when=null color=null ratio=0.0
+
+### converter-read target-null-primitive
+ok Target:count=0 name=null tags=null when=null color=null ratio=0.0
+
+### converter-read target-float-as-int
+ok Target:count=1 name=null tags=null when=null color=null ratio=0.0
+
+### converter-read target-string-as-int
+ok Target:count=12 name=null tags=null when=null color=null ratio=0.0
+
+### converter-read target-empty-string-as-int
+ok Target:count=0 name=null tags=null when=null color=null ratio=0.0
+
+### converter-read target-bool-as-int
+error HttpMessageNotReadableException
+
+### converter-read target-int-as-string
+ok Target:count=0 name=12 tags=null when=null color=null ratio=0.0
+
+### converter-read target-single-as-array
+error HttpMessageNotReadableException
+
+### converter-read target-epoch-millis-instant
+ok Target:count=0 name=null tags=null when=+55840-11-08T22:15:23Z color=null ratio=0.0
+
+### converter-read target-epoch-decimal-instant
+ok Target:count=0 name=null tags=null when=2023-11-14T22:13:20.123456789Z color=null ratio=0.0
+
+### converter-read target-unknown-enum
+error HttpMessageNotReadableException
+
+### converter-read target-enum-index
+ok Target:count=0 name=null tags=null when=null color=GREEN ratio=0.0
+
+### converter-read target-trailing-tokens
+ok Target:count=1 name=null tags=null when=null color=null ratio=0.0
+
+### converter-read target-comments
+error HttpMessageNotReadableException
+
+### converter-read target-single-quotes
+error HttpMessageNotReadableException
+
+### converter-read target-duplicate-keys
+ok Target:count=2 name=null tags=null when=null color=null ratio=0.0
+
+### converter-read target-nan
+error HttpMessageNotReadableException
+
+### converter-read target-empty
+error HttpMessageNotReadableException
+
+### converter-read target-locale-style-instant
+ok Target:count=0 name=null tags=null when=2026-11-20T12:45:30.123Z color=null ratio=0.0
+
+### converter-read-jdk locale
+ok JdkTarget:locale=fr_CA|fr-CA month=null byLocale=null
+
+### converter-read-jdk locale-tag
+ok JdkTarget:locale=fr_CA|fr-CA month=null byLocale=null
+
+### converter-read-jdk locale-script
+ok JdkTarget:locale=zh_TW_#Hant|zh-Hant-TW month=null byLocale=null
+
+### converter-read-jdk locale-extension
+ok JdkTarget:locale=de_DE_#u-co-phonebk|de-DE-u-co-phonebk month=null byLocale=null
+
+### converter-read-jdk locale-padded
+ok JdkTarget:locale=en_US|en-US month=null byLocale=null
+
+### converter-read-jdk locale-empty
+ok JdkTarget:locale=|und month=null byLocale=null
+
+### converter-read-jdk locale-map-key
+ok JdkTarget:locale=null month=null byLocale={sr__#Latn=1,  en =2}
+
+### converter-read-jdk month-name
+ok JdkTarget:locale=null month=NOVEMBER byLocale=null
+
+### converter-read-jdk month-number
+ok JdkTarget:locale=null month=NOVEMBER byLocale=null
+
+### converter-read-map map
+ok LinkedHashMap{b=Integer:1,a=ArrayList[Integer:1,Double:2.5,String:s,null,Boolean:true,],c=LinkedHashMap{x=Double:1.1,},}
+
+### converter-read-map big-numbers
+ok LinkedHashMap{i=BigInteger:12345678901234567890,d=Double:1.0,e=Double:Infinity,}
+
+### converter-read-map leading-zero
+error HttpMessageNotReadableException
+
+### converter-read-map trailing-comma
+error HttpMessageNotReadableException
+
+### converter-read-map trailing-garbage
+ok LinkedHashMap{a=Integer:1,}
+
+### converter-read-map nested-500
+ok LinkedHashMap{a=LinkedHashMap{a=LinkedHashMap{a=LinkedHashMap{a=LinkedHashMap{a=LinkedHashMap{a=LinkedHashMap{a=LinkedHashMap{a=LinkedHashMap{a=LinkedHashMap{a=LinkedHashMap{a=LinkedHashMap{a=LinkedHashMap{a=LinkedHashMap{a=LinkedHashMap{a=LinkedHashMap{a=LinkedHashMap{a=LinkedHashMap{a=LinkedHas...(9012 chars)
+
+### converter-read-map nested-501
+ok LinkedHashMap{a=LinkedHashMap{a=LinkedHashMap{a=LinkedHashMap{a=LinkedHashMap{a=LinkedHashMap{a=LinkedHashMap{a=LinkedHashMap{a=LinkedHashMap{a=LinkedHashMap{a=LinkedHashMap{a=LinkedHashMap{a=LinkedHashMap{a=LinkedHashMap{a=LinkedHashMap{a=LinkedHashMap{a=LinkedHashMap{a=LinkedHashMap{a=LinkedHas...(9030 chars)
+
+### converter-read-map nested-1000
+ok LinkedHashMap{a=LinkedHashMap{a=LinkedHashMap{a=LinkedHashMap{a=LinkedHashMap{a=LinkedHashMap{a=LinkedHashMap{a=LinkedHashMap{a=LinkedHashMap{a=LinkedHashMap{a=LinkedHashMap{a=LinkedHashMap{a=LinkedHashMap{a=LinkedHashMap{a=LinkedHashMap{a=LinkedHashMap{a=LinkedHashMap{a=LinkedHashMap{a=LinkedHas...(18012 chars)
+
+### converter-read-map nested-1001
+error HttpMessageNotReadableException
+
+### converter-read-map long-name
+error HttpMessageNotReadableException
+
+### converter-read-map long-number
+error HttpMessageNotReadableException
+

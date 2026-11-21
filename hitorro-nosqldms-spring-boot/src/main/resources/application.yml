@@ -4,10 +4,11 @@ server:
 spring:
   application:
     name: hitorro-dms
-  http:
-    converters:
-      # Boot 4 defaults to Jackson 3; keep Jackson 2 (com.fasterxml.jackson) for HTTP.
-      preferred-json-mapper: jackson2
+  # REST JSON keeps the format the app had on Jackson 2 (Boot's Jackson 2 mapper):
+  # Jackson 2 defaults plus Boot's ISO dates and lenient reads. The 2.18 stream
+  # limits and the Locale format are set in JsonConfig. Pinned by GoldenRestTest.
+  jackson:
+    use-jackson2-defaults: true
   servlet:
     multipart:
       max-file-size: 128MB
@@ -15,6 +16,10 @@ spring:
 
 management:
   endpoints:
+    jackson:
+      # Actuator JSON through Boot's (Jackson 2 compatible) mapper above. The default isolated
+      # Jackson 3 mapper sorts properties alphabetically ({"groups":...,"status":"UP"}).
+      isolated-json-mapper: false
     web:
       exposure:
         include: health,info,metrics

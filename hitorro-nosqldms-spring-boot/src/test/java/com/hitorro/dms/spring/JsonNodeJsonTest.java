@@ -3,9 +3,9 @@
  */
 package com.hitorro.dms.spring;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.JsonNode;
+import com.hitorro.util.json.JsonMappers;
+import tools.jackson.databind.node.ObjectNode;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -14,7 +14,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageConverter;
-import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
@@ -33,15 +33,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Boot 4 defaults HTTP JSON to Jackson 3 (tools.jackson). The DMS keeps
- * Jackson 2 (spring-boot-jackson2 + spring.http.converters.preferred-json-mapper=jackson2).
- * A Jackson 3 converter would write a com.fasterxml JsonNode as a bean
- * ({"array":false,"nodeType":"OBJECT",...}), so these tests pin the body.
+ * HTTP JSON is Boot 4's own Jackson 3 (tools.jackson) converter, and the DMS and HiTorro libraries
+ * use Jackson 3 too. Before 4.0.0 the DMS ran on Jackson 2 through spring-boot-jackson2, where a
+ * Jackson 3 converter would have written a com.fasterxml JsonNode as a bean
+ * ({"array":false,"nodeType":"OBJECT",...}). These tests pin the body and the converter.
  */
 @SpringBootTest(properties = { "dms.lucene-enabled=false" })
 @AutoConfigureMockMvc
-@Import(Jackson2JsonTest.ProbeConfig.class)
-class Jackson2JsonTest {
+@Import(JsonNodeJsonTest.ProbeConfig.class)
+class JsonNodeJsonTest {
 
     @DynamicPropertySource
     static void tmpHome(DynamicPropertyRegistry reg) {
@@ -64,11 +64,11 @@ class Jackson2JsonTest {
     }
 
     @Test
-    void jackson2ConverterIsTheJsonWriter() {
+    void jacksonConverterIsTheJsonWriter() {
         HttpMessageConverter<?> firstJson = adapter.getMessageConverters().stream()
                 .filter(c -> c.canWrite(ObjectNode.class, MediaType.APPLICATION_JSON))
                 .findFirst().orElseThrow();
-        assertThat(firstJson).isInstanceOf(MappingJackson2HttpMessageConverter.class);
+        assertThat(firstJson).isInstanceOf(JacksonJsonHttpMessageConverter.class);
     }
 
     @Test
@@ -89,7 +89,7 @@ class Jackson2JsonTest {
         static class JsonNodeProbeController {
             @GetMapping("/test/json-node")
             JsonNode jsonNode() {
-                ObjectNode n = new ObjectMapper().createObjectNode();
+                ObjectNode n = JsonMappers.json().createObjectNode();
                 n.put("name", "dms");
                 n.put("count", 3);
                 n.putObject("nested").put("ok", true);

@@ -42,14 +42,6 @@
             <artifactId>spring-boot-starter-webmvc</artifactId>
             <version>${spring-boot.version}</version>
         </dependency>
-        <!-- Boot 4 defaults to Jackson 3 (tools.jackson); the DMS and HiTorro
-             libraries use Jackson 2. spring.http.converters.preferred-json-mapper
-             =jackson2 (application.yml) selects this module's converter. -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-jackson2</artifactId>
-            <version>${spring-boot.version}</version>
-        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
