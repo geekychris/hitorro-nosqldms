@@ -3,11 +3,13 @@ package com.hitorro.dms.spring.config;
 import com.hitorro.util.json.Jackson2JdkModule;
 import com.hitorro.util.json.JsonMappers;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import org.springframework.boot.actuate.endpoint.jackson.EndpointJsonMapper;
 import org.springframework.boot.jackson.autoconfigure.JsonFactoryBuilderCustomizer;
 import org.springframework.boot.jackson.autoconfigure.JsonMapperBuilderCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import tools.jackson.databind.DeserializationFeature;
@@ -53,11 +55,24 @@ public class JsonConfig {
      * Actuator JSON. Boot 4's isolated endpoint mapper is a plain Jackson 3 mapper (alphabetical properties);
      * with {@code management.endpoints.jackson.isolated-json-mapper=false} this bean takes its place. It is
      * what Boot's former isolated Jackson 2 endpoint mapper was: Jackson 2 defaults and limits, ISO dates
-     * and durations, lenient reads, no default view inclusion, nulls left out.
+     * and durations, lenient reads, no default view inclusion, nulls left out. It is {@code @Primary} so it also
+     * wins where Boot's isolated mapper gets created anyway (Boot's has no {@code @ConditionalOnMissingBean}).
+     *
+     * <p>A health component ({@code IndicatedHealthDescriptor}) has only {@code getStatus()} and
+     * {@code getDetails()}, no fields, so Jackson 2 and 3 order the two by {@code Class.getDeclaredMethods()},
+     * which differs between JVM runs. The mix-in pins {@code status, details}, the usual order.
      */
     @Bean
+    @Primary
     EndpointJsonMapper hitorroEndpointJsonMapper() {
-        JsonMapper mapper = JsonMappers.builder()
+        JsonMapper.Builder builder = JsonMappers.builder();
+        try {
+            builder.addMixIn(Class.forName(INDICATED_HEALTH_DESCRIPTOR, false, JsonConfig.class.getClassLoader()),
+                    StatusFirst.class);
+        } catch (ClassNotFoundException e) {
+            // no health endpoint on the classpath
+        }
+        JsonMapper mapper = builder
                 .disable(DateTimeFeature.WRITE_DATES_AS_TIMESTAMPS)
                 .disable(DateTimeFeature.WRITE_DURATIONS_AS_TIMESTAMPS)
                 .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
@@ -66,5 +81,11 @@ public class JsonConfig {
                         .withContentInclusion(JsonInclude.Include.NON_NULL))
                 .build();
         return () -> mapper;
+    }
+
+    static final String INDICATED_HEALTH_DESCRIPTOR = "org.springframework.boot.health.actuate.endpoint.IndicatedHealthDescriptor";
+
+    @JsonPropertyOrder({"status", "details"})
+    interface StatusFirst {
     }
 }
